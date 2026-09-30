@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ErrorBanner, Loading } from "@/components/Status";
 import { api } from "@/lib/api";
+import { leagueHref } from "@/lib/routes";
 import { useLoader } from "@/lib/useLoader";
 
 export default function LeaguesPage() {
@@ -37,7 +38,7 @@ export default function LeaguesPage() {
             {leagues.map((l) => (
               <tr key={l.id}>
                 <td>
-                  <Link href={`/leagues/${l.id}`}>{l.name}</Link>
+                  <Link href={leagueHref("/league", l.id)}>{l.name}</Link>
                 </td>
                 <td>{l.num_teams}</td>
                 <td>{l.num_weeks}</td>

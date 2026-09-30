@@ -10,4 +10,10 @@ uvicorn app.main:app --reload     # http://localhost:8000/docs
 pytest
 ```
 
+Run the tests against Postgres instead of in-memory SQLite:
+
+```bash
+TEST_DATABASE_URL=postgresql+psycopg://user:pass@localhost:5432/pickleball_test pytest
+```
+
 Docker: `docker build -t pickleball-api . && docker run -p 8000:8000 -v pickleball-data:/data pickleball-api`

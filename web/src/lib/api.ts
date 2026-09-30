@@ -1,5 +1,9 @@
-// Thin typed client for the Python API. Requests go to the same-origin
-// /api proxy (src/app/api/[...path]/route.ts), which forwards to API_URL.
+// Thin typed client for the Python API.
+//
+// By default requests go to same-origin /api, which is routed to the API by
+// CloudFront in AWS, nginx in docker-compose, and a dev-server rewrite under
+// `npm run dev` (see next.config.ts). NEXT_PUBLIC_API_URL overrides this at
+// build time, e.g. to call the API directly (needs CORS_ORIGINS on the API).
 
 import type {
   Dashboard,
@@ -12,7 +16,7 @@ import type {
   Team,
 } from "./types";
 
-const BASE = "/api";
+const BASE = process.env.NEXT_PUBLIC_API_URL ?? "/api";
 
 export class ApiError extends Error {
   constructor(

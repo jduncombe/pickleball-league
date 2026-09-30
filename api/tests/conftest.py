@@ -14,13 +14,25 @@ from app.database import Base, get_db  # noqa: E402
 from app.main import app  # noqa: E402
 
 
-@pytest.fixture()
-def client():
-    engine = create_engine(
+# Set TEST_DATABASE_URL (e.g. a throwaway Postgres) to run against a real server;
+# defaults to in-memory SQLite.
+TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
+
+
+def _make_engine():
+    if TEST_DATABASE_URL:
+        return create_engine(TEST_DATABASE_URL)
+    return create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
+
+
+@pytest.fixture()
+def client():
+    engine = _make_engine()
+    Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
     TestSession = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
 
@@ -34,6 +46,7 @@ def client():
     app.dependency_overrides[get_db] = override_get_db
     yield TestClient(app)
     app.dependency_overrides.clear()
+    engine.dispose()
 
 
 @pytest.fixture()

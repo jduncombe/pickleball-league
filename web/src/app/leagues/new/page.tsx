@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ErrorBanner } from "@/components/Status";
 import { api } from "@/lib/api";
+import { leagueHref } from "@/lib/routes";
 import type { LeagueCreate } from "@/lib/types";
 
 const FIELDS: { key: Exclude<keyof LeagueCreate, "name">; label: string; min: number; max: number; help: string }[] = [
@@ -34,7 +35,7 @@ export default function NewLeaguePage() {
     setSaving(true);
     try {
       const league = await api.createLeague(form);
-      router.push(`/leagues/${league.id}/teams`);
+      router.push(leagueHref("/league/teams", league.id));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
       setSaving(false);

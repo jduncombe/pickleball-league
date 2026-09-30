@@ -1,0 +1,142 @@
+name: Deploy
+
+# Deploys main to AWS: builds and pushes the API image, applies the Terraform
+# app stack (which rolls the ECS service onto the new image), then uploads the
+# static site to S3 and invalidates CloudFront.
+#
+# Requires the one-time bootstrap in docs/deployment.md.
+#
+# The deploy job is currently DISABLED: it only runs when the repository
+# variable DEPLOY_ENABLED is set to "true", which it isn't. Pushes to main
+# only run CI. To enable deploys, fill in infra/app/production.tfvars, set the
+# repository variables listed in docs/deployment.md, then set DEPLOY_ENABLED.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Never run two deploys (and two terraform applies) at once; queue instead.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  TERRAFORM_VERSION: "1.16.4"
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    needs: ci
+    # Disabled unless DEPLOY_ENABLED=true; see the comment at the top of this file.
+    if: vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ steps.tf.outputs.site_url }}
+    permissions:
+      contents: read
+      id-token: write # OIDC token for the AWS role
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      API_IMAGE: ${{ vars.ECR_REPOSITORY_URL }}:${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      # --- API image ---------------------------------------------------------------
+      - uses: aws-actions/amazon-ecr-login@v2
+
+      # The API runs on Graviton (ARM64) Fargate, so build a linux/arm64 image.
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Build and push API image
+        env:
+          ECR_REPOSITORY_URL: ${{ vars.ECR_REPOSITORY_URL }}
+        run: |
+          # Tags are immutable, so skip the push when re-running a deploy of the same commit.
+          if aws ecr describe-images --repository-name "${ECR_REPOSITORY_URL#*/}" \
+               --image-ids imageTag="$GITHUB_SHA" >/dev/null 2>&1; then
+            echo "Image $API_IMAGE already exists"
+          else
+            docker buildx build --platform linux/arm64 --tag "$API_IMAGE" --push api
+          fi
+
+      # --- Infrastructure + API rollout -----------------------------------------------
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+
+      - name: Terraform init
+        working-directory: infra/app
+        run: >-
+          terraform init -input=false
+          -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}"
+          -backend-config="region=${{ vars.AWS_REGION }}"
+
+      - name: Terraform apply
+        working-directory: infra/app
+        # Waits for the ECS service to become stable on the new image; ECS rolls
+        # back automatically (and this step fails) if the new tasks are unhealthy.
+        run: >-
+          terraform apply -input=false -auto-approve
+          -var-file=production.tfvars
+          -var="aws_region=${{ vars.AWS_REGION }}"
+          -var="api_image=${{ env.API_IMAGE }}"
+
+      - name: Read Terraform outputs
+        id: tf
+        working-directory: infra/app
+        run: |
+          for name in site_url web_bucket cloudfront_distribution_id; do
+            echo "$name=$(terraform output -raw $name)" >> "$GITHUB_OUTPUT"
+          done
+
+      # --- Static site -----------------------------------------------------------------
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Build static site
+        working-directory: web
+        run: npm ci && npm run build
+
+      - name: Upload to S3
+        working-directory: web/out
+        env:
+          BUCKET: ${{ steps.tf.outputs.web_bucket }}
+        run: |
+          # Content-hashed assets first, cached for a year. Old ones are kept so
+          # pages already open in a browser keep working.
+          aws s3 sync _next/static "s3://$BUCKET/_next/static" \
+            --cache-control "public,max-age=31536000,immutable"
+          # Then everything else (HTML etc.), always revalidated.
+          aws s3 sync . "s3://$BUCKET" --delete \
+            --exclude "_next/static/*" \
+            --cache-control "no-cache"
+
+      - name: Invalidate CloudFront
+        run: >-
+          aws cloudfront create-invalidation
+          --distribution-id "${{ steps.tf.outputs.cloudfront_distribution_id }}"
+          --paths "/*"
+
+      - name: Summary
+        run: |
+          echo "### Deployed ${{ github.sha }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Site: ${{ steps.tf.outputs.site_url }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- API image: \`${{ env.API_IMAGE }}\`" >> "$GITHUB_STEP_SUMMARY"

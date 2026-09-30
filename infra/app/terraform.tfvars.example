@@ -1,0 +1,17 @@
+# Copy to terraform.tfvars for local plans/applies. The deploy workflow uses
+# production.tfvars and passes api_image on the command line.
+
+aws_region = "ap-southeast-2"
+api_image  = "123456789012.dkr.ecr.ap-southeast-2.amazonaws.com/pickleball-league-api:<git-sha>"
+
+# Existing VPC (with private subnets routed through a NAT gateway):
+vpc_name            = "my-vpc" # or: vpc_id = "vpc-0123456789abcdef0"
+private_subnet_tags = { Tier = "private" }
+
+# api_desired_count = 1
+# db_instance_class = "db.t4g.micro"
+# db_multi_az       = false
+
+# Custom domain (certificate must be in us-east-1):
+# domain_names        = ["league.example.com"]
+# acm_certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/..."

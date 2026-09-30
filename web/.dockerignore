@@ -1,5 +1,8 @@
 node_modules
 .next
+out
 .env*
 !.env.example
 Dockerfile
+AGENTS.md
+CLAUDE.md
