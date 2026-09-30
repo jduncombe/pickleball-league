@@ -11,7 +11,7 @@ limited number of courts, and record results.
 | --- | --- | --- |
 | Web interface | Next.js (App Router, TypeScript), exported as a static site | [`web/`](web/) |
 | API | Python · FastAPI · SQLAlchemy · PostgreSQL (SQLite locally) | [`api/`](api/) |
-| Infrastructure | Terraform: S3 + CloudFront, ECS Fargate, RDS | [`infra/`](infra/) |
+| Infrastructure | Terraform: S3 + CloudFront, ECS Fargate, RDS, in an existing VPC | [`infra/`](infra/) |
 | CI/CD | GitHub Actions | [`.github/workflows/`](.github/workflows/) |
 
 ## Quick start (Docker)
@@ -28,9 +28,11 @@ League data is stored in SQLite on the `api-data` Docker volume.
 
 ## Deploying to AWS
 
-Pushes to `main` are tested and then deployed by GitHub Actions: the static
-site to S3 behind CloudFront, and the API to ECS Fargate with RDS PostgreSQL.
-One-time setup is described in [docs/deployment.md](docs/deployment.md).
+The Terraform and deploy workflow put the static site in S3 behind CloudFront,
+and the API on Graviton ECS Fargate with RDS PostgreSQL, in an existing VPC in
+ap-southeast-2. **The deploy job is currently disabled**, so pushes to `main`
+run CI only. Setup and how to enable it are in
+[docs/deployment.md](docs/deployment.md).
 
 ## Local development (without Docker)
 
@@ -94,6 +96,6 @@ npm run dev                             # http://localhost:3000 (/api/* forwarde
 │   └── Dockerfile
 ├── infra/
 │   ├── bootstrap/          # one-time: state bucket, ECR, GitHub deploy role
-│   └── app/                # VPC, RDS, ECS/ALB, S3/CloudFront (+ offline tests)
+│   └── app/                # RDS, ECS/ALB, S3/CloudFront in an existing VPC (+ offline tests)
 └── docs/
 ```

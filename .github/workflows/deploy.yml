@@ -4,8 +4,12 @@ name: Deploy
 # app stack (which rolls the ECS service onto the new image), then uploads the
 # static site to S3 and invalidates CloudFront.
 #
-# Requires the one-time bootstrap in docs/deployment.md. Until the repository
-# variables below are set, the deploy job is skipped (CI still runs).
+# Requires the one-time bootstrap in docs/deployment.md.
+#
+# The deploy job is currently DISABLED: it only runs when the repository
+# variable DEPLOY_ENABLED is set to "true", which it isn't. Pushes to main
+# only run CI. To enable deploys, fill in infra/app/production.tfvars, set the
+# repository variables listed in docs/deployment.md, then set DEPLOY_ENABLED.
 
 on:
   push:
@@ -29,7 +33,8 @@ jobs:
 
   deploy:
     needs: ci
-    if: vars.AWS_DEPLOY_ROLE_ARN != ''
+    # Disabled unless DEPLOY_ENABLED=true; see the comment at the top of this file.
+    if: vars.DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
     environment:
       name: production
@@ -51,6 +56,10 @@ jobs:
       # --- API image ---------------------------------------------------------------
       - uses: aws-actions/amazon-ecr-login@v2
 
+      # The API runs on Graviton (ARM64) Fargate, so build a linux/arm64 image.
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
+
       - name: Build and push API image
         env:
           ECR_REPOSITORY_URL: ${{ vars.ECR_REPOSITORY_URL }}
@@ -60,8 +69,7 @@ jobs:
                --image-ids imageTag="$GITHUB_SHA" >/dev/null 2>&1; then
             echo "Image $API_IMAGE already exists"
           else
-            docker build -t "$API_IMAGE" api
-            docker push "$API_IMAGE"
+            docker buildx build --platform linux/arm64 --tag "$API_IMAGE" --push api
           fi
 
       # --- Infrastructure + API rollout -----------------------------------------------
@@ -83,6 +91,7 @@ jobs:
         # back automatically (and this step fails) if the new tasks are unhealthy.
         run: >-
           terraform apply -input=false -auto-approve
+          -var-file=production.tfvars
           -var="aws_region=${{ vars.AWS_REGION }}"
           -var="api_image=${{ env.API_IMAGE }}"
 

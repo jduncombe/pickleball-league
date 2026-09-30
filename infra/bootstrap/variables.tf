@@ -1,7 +1,7 @@
 variable "aws_region" {
   description = "Region for the state bucket, ECR repository and the app stack."
   type        = string
-  default     = "eu-west-2"
+  default     = "ap-southeast-2"
 }
 
 variable "project" {

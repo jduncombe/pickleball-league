@@ -1,7 +1,7 @@
 variable "aws_region" {
   description = "AWS region for everything except CloudFront (global)."
   type        = string
-  default     = "eu-west-2"
+  default     = "ap-southeast-2"
 }
 
 variable "project" {
@@ -21,29 +21,35 @@ variable "api_image" {
   type        = string
 }
 
-# --- Network --------------------------------------------------------------------
+# --- Network (existing VPC, looked up) --------------------------------------------
 
-variable "vpc_cidr" {
-  description = "CIDR block for the VPC. Split into /24 public and private subnets."
+variable "vpc_id" {
+  description = "ID of the existing VPC. If empty, the VPC is looked up by vpc_name."
   type        = string
-  default     = "10.40.0.0/16"
+  default     = ""
 }
 
-variable "az_count" {
-  description = "Number of availability zones to spread subnets across (ALB and RDS need at least 2)."
-  type        = number
-  default     = 2
+variable "vpc_name" {
+  description = "Name tag of the existing VPC, used when vpc_id is empty."
+  type        = string
+  default     = ""
 
   validation {
-    condition     = var.az_count >= 2 && var.az_count <= 4
-    error_message = "az_count must be between 2 and 4."
+    condition     = var.vpc_id != "" || var.vpc_name != ""
+    error_message = "Set vpc_id or vpc_name to identify the existing VPC."
   }
+}
+
+variable "private_subnet_tags" {
+  description = "Tags identifying the VPC's private subnets (routed through a NAT gateway). The ALB, API tasks and RDS are placed in every matching subnet; they must span at least two AZs."
+  type        = map(string)
+  default     = { Tier = "private" }
 }
 
 # --- API (ECS Fargate) ------------------------------------------------------------
 
 variable "api_cpu" {
-  description = "Fargate task CPU units (256 = 0.25 vCPU)."
+  description = "Fargate task CPU units (256 = 0.25 vCPU). Tasks run on Graviton (ARM64)."
   type        = number
   default     = 256
 }
@@ -69,7 +75,7 @@ variable "log_retention_days" {
 # --- Database (RDS PostgreSQL) -------------------------------------------------------
 
 variable "db_instance_class" {
-  description = "RDS instance class."
+  description = "RDS instance class. Graviton (t4g/m7g/r7g) classes are cheaper than their Intel equivalents."
   type        = string
   default     = "db.t4g.micro"
 }

@@ -3,8 +3,11 @@
 # Run with: terraform init -backend=false && terraform test
 
 mock_provider "aws" {
-  mock_data "aws_availability_zones" {
-    defaults = { names = ["eu-west-2a", "eu-west-2b", "eu-west-2c"] }
+  mock_data "aws_vpc" {
+    defaults = { id = "vpc-0123456789abcdef0", cidr_block = "10.20.0.0/16" }
+  }
+  mock_data "aws_subnets" {
+    defaults = { ids = ["subnet-bbbb", "subnet-aaaa"] }
   }
   mock_data "aws_caller_identity" {
     defaults = { account_id = "123456789012" }
@@ -17,7 +20,7 @@ mock_provider "aws" {
       address = "db.internal"
       port    = 5432
       master_user_secret = [{
-        secret_arn    = "arn:aws:secretsmanager:eu-west-2:123456789012:secret:rds-db-abc"
+        secret_arn    = "arn:aws:secretsmanager:ap-southeast-2:123456789012:secret:rds-db-abc"
         kms_key_id    = ""
         secret_status = "active"
       }]
@@ -36,29 +39,69 @@ mock_provider "aws" {
     defaults = { arn = "arn:aws:iam::123456789012:role/example" }
   }
   mock_resource "aws_lb" {
-    defaults = { arn = "arn:aws:elasticloadbalancing:eu-west-2:123456789012:loadbalancer/app/example/abc" }
+    defaults = { arn = "arn:aws:elasticloadbalancing:ap-southeast-2:123456789012:loadbalancer/app/example/abc" }
   }
   mock_resource "aws_lb_target_group" {
-    defaults = { arn = "arn:aws:elasticloadbalancing:eu-west-2:123456789012:targetgroup/example/abc" }
+    defaults = { arn = "arn:aws:elasticloadbalancing:ap-southeast-2:123456789012:targetgroup/example/abc" }
   }
   mock_resource "aws_ecs_task_definition" {
-    defaults = { arn = "arn:aws:ecs:eu-west-2:123456789012:task-definition/example:1" }
+    defaults = { arn = "arn:aws:ecs:ap-southeast-2:123456789012:task-definition/example:1" }
   }
   mock_resource "aws_s3_bucket" {
     defaults = { arn = "arn:aws:s3:::example" }
   }
 }
 
+# Each looked-up private subnet sits in a different AZ.
+override_data {
+  target = data.aws_subnet.private["subnet-aaaa"]
+  values = { id = "subnet-aaaa", availability_zone = "ap-southeast-2a" }
+}
+
+override_data {
+  target = data.aws_subnet.private["subnet-bbbb"]
+  values = { id = "subnet-bbbb", availability_zone = "ap-southeast-2b" }
+}
+
 variables {
-  api_image = "123456789012.dkr.ecr.eu-west-2.amazonaws.com/pickleball-league-api:test"
+  api_image = "123456789012.dkr.ecr.ap-southeast-2.amazonaws.com/pickleball-league-api:test"
+  vpc_name  = "existing-vpc"
 }
 
 run "default_configuration" {
   command = apply
 
   assert {
-    condition     = length(aws_subnet.public) == 2 && length(aws_subnet.private) == 2
-    error_message = "Expected two public and two private subnets."
+    condition     = aws_lb.api.subnets == toset(["subnet-aaaa", "subnet-bbbb"])
+    error_message = "The ALB must use the looked-up private subnets."
+  }
+
+  assert {
+    condition = (
+      !one(aws_ecs_service.api.network_configuration).assign_public_ip &&
+      one(aws_ecs_service.api.network_configuration).subnets == toset(["subnet-aaaa", "subnet-bbbb"])
+    )
+    error_message = "API tasks must run in the private subnets without public IPs."
+  }
+
+  assert {
+    condition     = aws_db_subnet_group.main.subnet_ids == toset(["subnet-aaaa", "subnet-bbbb"])
+    error_message = "RDS must use the looked-up private subnets."
+  }
+
+  assert {
+    condition     = aws_vpc_security_group_ingress_rule.alb_http.cidr_ipv4 == "10.20.0.0/16"
+    error_message = "The ALB should admit the VPC's CIDR (CloudFront VPC origin)."
+  }
+
+  assert {
+    condition     = one(aws_ecs_task_definition.api.runtime_platform).cpu_architecture == "ARM64"
+    error_message = "The API should run on Graviton (ARM64)."
+  }
+
+  assert {
+    condition     = startswith(aws_db_instance.main.instance_class, "db.t4g.")
+    error_message = "The default database instance should be Graviton (t4g)."
   }
 
   assert {
@@ -80,8 +123,8 @@ run "default_configuration" {
     condition = [
       for s in jsondecode(aws_ecs_task_definition.api.container_definitions)[0].secrets : s.valueFrom
       ] == [
-      "arn:aws:secretsmanager:eu-west-2:123456789012:secret:rds-db-abc:username::",
-      "arn:aws:secretsmanager:eu-west-2:123456789012:secret:rds-db-abc:password::",
+      "arn:aws:secretsmanager:ap-southeast-2:123456789012:secret:rds-db-abc:username::",
+      "arn:aws:secretsmanager:ap-southeast-2:123456789012:secret:rds-db-abc:password::",
     ]
     error_message = "DB credentials must come from the RDS-managed secret."
   }
@@ -114,11 +157,32 @@ run "custom_domain" {
   }
 }
 
+run "rejects_single_az_subnets" {
+  command = plan
+
+  override_data {
+    target = data.aws_subnet.private["subnet-bbbb"]
+    values = { id = "subnet-bbbb", availability_zone = "ap-southeast-2a" }
+  }
+
+  expect_failures = [check.private_subnets_span_two_azs]
+}
+
+run "requires_vpc_identifier" {
+  command = plan
+
+  variables {
+    vpc_name = ""
+  }
+
+  expect_failures = [var.vpc_name]
+}
+
 run "rejects_regional_certificate" {
   command = plan
 
   variables {
-    acm_certificate_arn = "arn:aws:acm:eu-west-2:123456789012:certificate/abc"
+    acm_certificate_arn = "arn:aws:acm:ap-southeast-2:123456789012:certificate/abc"
   }
 
   expect_failures = [var.acm_certificate_arn]

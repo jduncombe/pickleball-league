@@ -12,13 +12,13 @@ locals {
 resource "aws_security_group" "alb" {
   name        = "${local.name}-alb"
   description = "Internal API load balancer, reached by CloudFront VPC origin"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = local.vpc_id
 }
 
 # CloudFront's VPC origin connects from network interfaces inside this VPC.
 resource "aws_vpc_security_group_ingress_rule" "alb_http" {
   security_group_id = aws_security_group.alb.id
-  cidr_ipv4         = aws_vpc.main.cidr_block
+  cidr_ipv4         = local.vpc_cidr
   ip_protocol       = "tcp"
   from_port         = 80
   to_port           = 80
@@ -39,7 +39,7 @@ resource "aws_lb" "api" {
   internal           = true
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb.id]
-  subnets            = aws_subnet.private[*].id
+  subnets            = local.private_subnet_ids
 
   drop_invalid_header_fields = true
 }
@@ -49,7 +49,7 @@ resource "aws_lb_target_group" "api" {
   port        = local.api_port
   protocol    = "HTTP"
   target_type = "ip"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = local.vpc_id
 
   deregistration_delay = 30
 
@@ -138,7 +138,7 @@ resource "aws_ecs_task_definition" "api" {
 
   runtime_platform {
     operating_system_family = "LINUX"
-    cpu_architecture        = "X86_64"
+    cpu_architecture        = "ARM64" # Graviton; the deploy workflow builds a linux/arm64 image
   }
 
   container_definitions = jsonencode([{
@@ -175,7 +175,7 @@ resource "aws_ecs_task_definition" "api" {
 resource "aws_security_group" "api" {
   name        = "${local.name}-api"
   description = "API tasks: inbound from the ALB only"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = local.vpc_id
 }
 
 resource "aws_vpc_security_group_ingress_rule" "api_from_alb" {
@@ -191,7 +191,7 @@ resource "aws_vpc_security_group_egress_rule" "api_all" {
   security_group_id = aws_security_group.api.id
   cidr_ipv4         = "0.0.0.0/0"
   ip_protocol       = "-1"
-  description       = "ECR, Secrets Manager, CloudWatch Logs, RDS"
+  description       = "ECR, Secrets Manager, CloudWatch Logs (via NAT), RDS"
 }
 
 resource "aws_ecs_service" "api" {
@@ -201,10 +201,12 @@ resource "aws_ecs_service" "api" {
   desired_count   = var.api_desired_count
   launch_type     = "FARGATE"
 
+  # Private subnets, no public IP: outbound traffic (ECR, Secrets Manager,
+  # CloudWatch Logs) goes through the VPC's NAT gateway.
   network_configuration {
-    subnets          = aws_subnet.public[*].id
+    subnets          = local.private_subnet_ids
     security_groups  = [aws_security_group.api.id]
-    assign_public_ip = true # outbound only; see network.tf
+    assign_public_ip = false
   }
 
   load_balancer {

@@ -1,12 +1,12 @@
 resource "aws_db_subnet_group" "main" {
   name       = local.name
-  subnet_ids = aws_subnet.private[*].id
+  subnet_ids = local.private_subnet_ids
 }
 
 resource "aws_security_group" "db" {
   name        = "${local.name}-db"
   description = "PostgreSQL, reachable only from the API tasks"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = local.vpc_id
 }
 
 resource "aws_vpc_security_group_ingress_rule" "db_from_api" {

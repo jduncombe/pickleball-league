@@ -50,5 +50,6 @@ web/CLAUDE.md
 *.tfstate
 *.tfstate.*
 *.tfvars
+!infra/app/production.tfvars
 !*.tfvars.example
 crash.log

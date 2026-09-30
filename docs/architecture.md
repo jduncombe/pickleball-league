@@ -10,7 +10,7 @@ The same shape is used everywhere; only the router in front changes:
 
 | Where | Serves the static site | Routes `/api/*` to the API | Database |
 | --- | --- | --- | --- |
-| AWS | S3 via CloudFront | CloudFront → internal ALB → ECS Fargate | RDS PostgreSQL |
+| AWS (ap-southeast-2) | S3 via CloudFront | CloudFront → internal ALB → ECS Fargate (Graviton) | RDS PostgreSQL (Graviton) |
 | `docker compose` | nginx | nginx → `api` container | SQLite volume |
 | `npm run dev` | Next.js dev server | dev-server rewrite → `API_URL` | SQLite file |
 
