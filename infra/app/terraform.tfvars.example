@@ -1,0 +1,14 @@
+# Copy to terraform.tfvars for local plans/applies. The deploy workflow passes
+# aws_region and api_image on the command line; other values use the defaults
+# in variables.tf unless set here.
+
+aws_region = "eu-west-2"
+api_image  = "123456789012.dkr.ecr.eu-west-2.amazonaws.com/pickleball-league-api:<git-sha>"
+
+# api_desired_count = 1
+# db_instance_class = "db.t4g.micro"
+# db_multi_az       = false
+
+# Custom domain (certificate must be in us-east-1):
+# domain_names        = ["league.example.com"]
+# acm_certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/..."

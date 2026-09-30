@@ -2,15 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { type LeaguePath, leagueHref } from "@/lib/routes";
 import type { League } from "@/lib/types";
 
 export function LeagueNav({ league }: { league: League }) {
   const pathname = usePathname();
-  const base = `/leagues/${league.id}`;
-  const tabs: { href: string; label: string; alsoActiveOn?: string }[] = [
-    { href: base, label: "Live", alsoActiveOn: "/" },
-    { href: `${base}/teams`, label: "Teams & players" },
-    { href: `${base}/matches`, label: "Schedule & results" },
+  const current = pathname.replace(/\/$/, "") || "/";
+  const tabs: { path: LeaguePath; label: string; alsoActiveOn?: string }[] = [
+    { path: "/league", label: "Live", alsoActiveOn: "/" },
+    { path: "/league/teams", label: "Teams & players" },
+    { path: "/league/matches", label: "Schedule & results" },
   ];
 
   return (
@@ -24,7 +25,11 @@ export function LeagueNav({ league }: { league: League }) {
       </div>
       <nav className="tabs">
         {tabs.map((tab) => (
-          <Link key={tab.href} href={tab.href} className={pathname === tab.href || pathname === tab.alsoActiveOn ? "active" : ""}>
+          <Link
+            key={tab.path}
+            href={leagueHref(tab.path, league.id)}
+            className={current === tab.path || current === tab.alsoActiveOn ? "active" : ""}
+          >
             {tab.label}
           </Link>
         ))}

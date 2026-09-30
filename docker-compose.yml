@@ -3,7 +3,7 @@ services:
     build: ./api
     environment:
       DATABASE_URL: sqlite:////data/pickleball.db
-      CORS_ORIGINS: http://localhost:3000
+      ROOT_PATH: /api
     volumes:
       - api-data:/data
     ports:
@@ -17,10 +17,10 @@ services:
   web:
     build: ./web
     environment:
-      # The Next.js server proxies /api/* to this address (container network).
+      # nginx serves the static site and proxies /api/* here (container network).
       API_URL: http://api:8000
     ports:
-      - "3000:3000"
+      - "3000:8080"
     depends_on:
       api:
         condition: service_healthy

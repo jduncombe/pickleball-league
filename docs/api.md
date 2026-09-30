@@ -1,6 +1,8 @@
 # API reference
 
-Base URL: `http://localhost:8000` (or `/api` via the web app's proxy).
+Base URL: `http://localhost:8000` when running the API directly, or `/api` on
+the site's origin (CloudFront in AWS, nginx in docker-compose, the dev server
+under `npm run dev`), which strips the prefix before forwarding.
 Full interactive documentation, generated from the code, is served at
 [`/docs`](http://localhost:8000/docs) — treat that as the source of truth.
 

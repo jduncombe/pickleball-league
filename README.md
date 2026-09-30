@@ -1,13 +1,18 @@
 # Pickleball League
 
+[![CI](https://github.com/jduncombe/pickleball-league/actions/workflows/ci.yml/badge.svg)](https://github.com/jduncombe/pickleball-league/actions/workflows/ci.yml)
+[![Deploy](https://github.com/jduncombe/pickleball-league/actions/workflows/deploy.yml/badge.svg)](https://github.com/jduncombe/pickleball-league/actions/workflows/deploy.yml)
+
 A skeleton for running a pickleball league: create a league, enter teams and
 players (with DUPR IDs), generate a round-robin schedule, run matches across a
 limited number of courts, and record results.
 
 | Part | Stack | Folder |
 | --- | --- | --- |
-| Web interface | Next.js (App Router, TypeScript) | [`web/`](web/) |
-| API | Python · FastAPI · SQLAlchemy · SQLite | [`api/`](api/) |
+| Web interface | Next.js (App Router, TypeScript), exported as a static site | [`web/`](web/) |
+| API | Python · FastAPI · SQLAlchemy · PostgreSQL (SQLite locally) | [`api/`](api/) |
+| Infrastructure | Terraform: S3 + CloudFront, ECS Fargate, RDS | [`infra/`](infra/) |
+| CI/CD | GitHub Actions | [`.github/workflows/`](.github/workflows/) |
 
 ## Quick start (Docker)
 
@@ -15,11 +20,17 @@ limited number of courts, and record results.
 docker compose up --build
 ```
 
-- Web UI: http://localhost:3000
-- API + interactive docs (Swagger): http://localhost:8000/docs
+- Web UI: http://localhost:3000 (nginx serving the static export, with `/api/*` proxied to the API as CloudFront does in AWS)
+- API + interactive docs (Swagger): http://localhost:8000/docs, or http://localhost:3000/api/docs
 
 League data is stored in SQLite on the `api-data` Docker volume.
 `docker compose down -v` wipes it.
+
+## Deploying to AWS
+
+Pushes to `main` are tested and then deployed by GitHub Actions: the static
+site to S3 behind CloudFront, and the API to ECS Fargate with RDS PostgreSQL.
+One-time setup is described in [docs/deployment.md](docs/deployment.md).
 
 ## Local development (without Docker)
 
@@ -39,22 +50,23 @@ Web (Node 20+):
 cd web
 npm install
 cp .env.example .env.local              # API_URL=http://localhost:8000
-npm run dev                             # http://localhost:3000
+npm run dev                             # http://localhost:3000 (/api/* forwarded to API_URL)
 ```
 
 ## Screens
 
 | Screen | Route | What it does |
 | --- | --- | --- |
-| **Live dashboard** (default) | `/` and `/leagues/[id]` | Teams on court right now, and this week's match-ups that can start because neither team is playing. Start a match on a free court, enter its score, or return it to the schedule. |
+| **Live dashboard** (default) | `/` and `/league/?id=…` | Teams on court right now, and this week's match-ups that can start because neither team is playing. Start a match on a free court, enter its score, or return it to the schedule. |
 | League creation | `/leagues/new` | Name, number of teams, weeks, rounds per week and courts. Creates placeholder teams and the full season schedule. |
-| Teams & players | `/leagues/[id]/teams` | Rename teams; add players with optional email and **DUPR ID**. |
-| Schedule & results | `/leagues/[id]/matches` | Week-by-week schedule grouped by round, score entry/correction, standings. |
+| Teams & players | `/league/teams/?id=…` | Rename teams; add players with optional email and **DUPR ID**. |
+| Schedule & results | `/league/matches/?id=…` | Week-by-week schedule grouped by round, score entry/correction, standings. |
 | Leagues | `/leagues` | All leagues. |
 
 ## Documentation
 
 - [Architecture](docs/architecture.md) — components, request flow, configuration, next steps
+- [Deployment](docs/deployment.md) — AWS architecture, one-time setup, CI/CD, operations, costs
 - [League model & scheduling](docs/league-model.md) — weeks, rounds, courts, and how the dashboard decides what's playable
 - [API reference](docs/api.md) — endpoints and payloads
 - [DUPR integration plan](docs/dupr-integration.md) — what's stored today and how the integration will plug in
@@ -64,6 +76,7 @@ npm run dev                             # http://localhost:3000
 ```
 .
 ├── docker-compose.yml
+├── .github/workflows/      # ci.yml (tests), deploy.yml (AWS)
 ├── api/                    # FastAPI service
 │   ├── app/
 │   │   ├── main.py         # app, CORS, routers
@@ -74,9 +87,13 @@ npm run dev                             # http://localhost:3000
 │   ├── tests/
 │   └── Dockerfile
 ├── web/                    # Next.js app
-│   ├── src/app/            # routes (pages + /api proxy)
+│   ├── src/app/            # pages (static export)
 │   ├── src/components/     # dashboard, forms, nav
 │   ├── src/lib/            # typed API client, types, hooks
+│   ├── nginx.conf.template # local serving + /api proxy
 │   └── Dockerfile
+├── infra/
+│   ├── bootstrap/          # one-time: state bucket, ECR, GitHub deploy role
+│   └── app/                # VPC, RDS, ECS/ALB, S3/CloudFront (+ offline tests)
 └── docs/
 ```
