@@ -1,6 +1,6 @@
 """Shared test helpers for driving league setup."""
 
-BASICS = {"name": "Autumn", "num_teams": 4, "num_weeks": 2, "rounds_per_week": 3, "num_courts": 1}
+BASICS = {"name": "Autumn", "num_teams": 4, "num_weeks": 2, "matches_per_week": 3, "num_courts": 1}
 
 
 def default_teams(num_teams: int) -> list[dict]:

@@ -32,6 +32,7 @@ app.add_middleware(
 )
 
 app.include_router(setup.router)
+app.include_router(setup.preview_router)
 app.include_router(leagues.router)
 app.include_router(teams.router)
 app.include_router(matches.router)

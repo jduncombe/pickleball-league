@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from .models import LeagueStatus, MatchStatus
 
@@ -21,10 +21,21 @@ class LeagueBasics(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     num_teams: int = Field(ge=2, le=64)
     num_weeks: int = Field(ge=1, le=52)
-    rounds_per_week: int = Field(ge=1, le=20)
+    # Matches each team plays per week (each against a different opponent).
+    matches_per_week: int = Field(ge=1, le=20)
     num_courts: int = Field(ge=1, le=50)
     points_to_win: Literal[11, 15, 21] = 11
     use_team_names: bool = False
+
+    @model_validator(mode="after")
+    def matches_fit_opponents(self):
+        if self.matches_per_week > self.num_teams - 1:
+            most = self.num_teams - 1
+            raise ValueError(
+                f"With {self.num_teams} teams, each team can play at most {most} "
+                f"match{'es' if most != 1 else ''} per week (one against each other team)"
+            )
+        return self
 
 
 class LeagueUpdate(BaseModel):
@@ -38,13 +49,13 @@ class LeagueRead(ORMModel):
     name: str
     num_teams: int
     num_weeks: int
-    rounds_per_week: int
+    matches_per_week: int
     num_courts: int
     points_to_win: int
     use_team_names: bool
     status: LeagueStatus
     created_league_at: datetime | None
-    # Once true, num_teams/num_weeks/rounds_per_week/points_to_win can't change in setup.
+    # Once true, num_teams/num_weeks/matches_per_week/points_to_win can't change in setup.
     has_played_matches: bool
     current_week: int
     created_at: datetime
@@ -187,3 +198,15 @@ class StandingRow(BaseModel):
     points_against: int
     point_diff: int
 
+
+class SchedulePreview(BaseModel):
+    """What a schedule with these settings looks like (setup summary)."""
+
+    rounds_per_week: int  # most rounds in any week
+    games_per_week: int  # most games in any week
+    has_catch_up_round: bool  # odd team count: last round pairs the teams that sat out
+    # Weeks in which one team plays a match fewer (teams x matches is odd).
+    teams_short_per_week: int
+    # Across the season, the fewest and most times any two teams meet.
+    min_meetings: int
+    max_meetings: int

@@ -13,7 +13,8 @@ export interface LeagueBasics {
   name: string;
   num_teams: number;
   num_weeks: number;
-  rounds_per_week: number;
+  /** Matches each team plays per week (at most num_teams - 1). */
+  matches_per_week: number;
   num_courts: number;
   /** Games are first to this many points, win by 2. */
   points_to_win: PointsToWin;
@@ -26,7 +27,7 @@ export interface League extends LeagueBasics {
   status: LeagueStatus;
   /** When the league was first created (setup finalised); null until then. */
   created_league_at: string | null;
-  /** Once true, num_teams / num_weeks / rounds_per_week / points_to_win can't change. */
+  /** Once true, num_teams / num_weeks / matches_per_week / points_to_win can't change. */
   has_played_matches: boolean;
   current_week: number;
   created_at: string;
@@ -104,4 +105,17 @@ export interface StandingRow {
   points_for: number;
   points_against: number;
   point_diff: number;
+}
+
+/** Shape of the schedule some setup basics would produce (GET /schedule-preview). */
+export interface SchedulePreview {
+  rounds_per_week: number;
+  games_per_week: number;
+  /** Odd team count: each week ends with a round for the teams that sat out. */
+  has_catch_up_round: boolean;
+  /** 1 when teams x matches is odd: one team per week plays a match fewer. */
+  teams_short_per_week: number;
+  /** Fewest and most times any two teams meet over the season. */
+  min_meetings: number;
+  max_meetings: number;
 }

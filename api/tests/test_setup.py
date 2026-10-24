@@ -32,7 +32,7 @@ def test_basics_resize_teams_during_setup(client):
     # Existing teams keep their players; new ones start empty.
     assert [len(t["players"]) for t in teams] == [2, 2, 2, 2, 0, 0]
 
-    client.put(f"/leagues/{lid}/setup", json={**BASICS, "num_teams": 3})
+    client.put(f"/leagues/{lid}/setup", json={**BASICS, "num_teams": 3, "matches_per_week": 2})
     assert len(client.get(f"/leagues/{lid}/teams").json()) == 3
 
 
@@ -78,12 +78,12 @@ def test_display_names_follow_use_team_names(client):
         {"name": "Dink Dynasty", "players": [{"name": "Alex"}, {"name": "Sam"}]},
         {"name": "Kitchen Crew", "players": [{"name": "Ann"}, {"name": "Bo"}, {"name": "Cy"}]},
     ]
-    named = set_up_league(client, teams=teams, num_teams=2, use_team_names=True)
+    named = set_up_league(client, teams=teams, num_teams=2, matches_per_week=1, use_team_names=True)
     shown = [t["display_name"] for t in client.get(f"/leagues/{named['id']}/teams").json()]
     assert shown == ["Dink Dynasty", "Kitchen Crew"]
 
     # Same teams in a league that doesn't use team names: shown by players.
-    unnamed = set_up_league(client, teams=teams, num_teams=2, use_team_names=False)
+    unnamed = set_up_league(client, teams=teams, num_teams=2, matches_per_week=1, use_team_names=False)
     shown = [t["display_name"] for t in client.get(f"/leagues/{unnamed['id']}/teams").json()]
     assert shown == ["Alex & Sam", "Ann, Bo & Cy"]
 
@@ -161,7 +161,7 @@ def test_dupr_ready_needs_every_player_to_have_a_dupr_id(client):
         {"players": [{"name": "C", "dupr_id": "CCCC33"}, {"name": "D"}]},
         {"players": [{"name": "E"}, {"name": "F"}]},
     ]
-    league = set_up_league(client, teams=teams, num_teams=3)
+    league = set_up_league(client, teams=teams, num_teams=3, matches_per_week=2)
     shown = {t["display_name"]: t["dupr_ready"] for t in client.get(f"/leagues/{league['id']}/teams").json()}
     assert shown == {"A & B": True, "C & D": False, "E & F": False}
 
@@ -192,3 +192,33 @@ def test_points_to_win_options_and_lock_after_play(client):
     resp = client.put(f"/leagues/{lid}/setup", json={**BASICS, "points_to_win": 11})
     assert resp.status_code == 409
     assert "points_to_win" in resp.text
+
+
+def test_matches_per_week_limited_by_opponents(client):
+    resp = client.post("/leagues", json={**BASICS, "num_teams": 4, "matches_per_week": 4})
+    assert resp.status_code == 422
+    assert "at most 3 matches per week" in resp.text
+
+
+def test_nine_teams_four_matches_per_week_end_to_end(client):
+    league = set_up_league(client, teams=default_teams(9), num_teams=9, num_weeks=1, matches_per_week=4)
+    matches = client.get(f"/leagues/{league['id']}/matches").json()
+    per_round = {}
+    for m in matches:
+        per_round[m["round"]] = per_round.get(m["round"], 0) + 1
+    assert per_round == {1: 4, 2: 4, 3: 4, 4: 4, 5: 2}
+
+
+def test_schedule_preview(client):
+    resp = client.get("/schedule-preview", params={"num_teams": 9, "num_weeks": 8, "matches_per_week": 4})
+    assert resp.json() == {
+        "rounds_per_week": 5,
+        "games_per_week": 18,
+        "has_catch_up_round": True,
+        "teams_short_per_week": 0,
+        "min_meetings": 4,
+        "max_meetings": 4,
+    }
+    odd = client.get("/schedule-preview", params={"num_teams": 7, "num_weeks": 4, "matches_per_week": 3}).json()
+    assert odd["teams_short_per_week"] == 1  # 7 x 3 is odd: one team a match short each week
+    assert client.get("/schedule-preview", params={"num_teams": 4, "num_weeks": 2, "matches_per_week": 4}).status_code == 422

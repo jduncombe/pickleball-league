@@ -5,7 +5,16 @@
 // `npm run dev` (see next.config.ts). NEXT_PUBLIC_API_URL overrides this at
 // build time, e.g. to call the API directly (needs CORS_ORIGINS on the API).
 
-import type { Dashboard, League, LeagueBasics, Match, StandingRow, Team, TeamSetup } from "./types";
+import type {
+  Dashboard,
+  League,
+  LeagueBasics,
+  Match,
+  SchedulePreview,
+  StandingRow,
+  Team,
+  TeamSetup,
+} from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "/api";
 
@@ -62,6 +71,10 @@ export const api = {
   listTeams: (leagueId: number) => request<Team[]>(`/leagues/${leagueId}/teams`),
 
   // Setup (teams and players can only be changed while a league is in setup)
+  schedulePreview: (b: Pick<LeagueBasics, "num_teams" | "num_weeks" | "matches_per_week">) =>
+    request<SchedulePreview>(
+      `/schedule-preview?num_teams=${b.num_teams}&num_weeks=${b.num_weeks}&matches_per_week=${b.matches_per_week}`,
+    ),
   createLeague: (body: LeagueBasics) =>
     request<League>("/leagues", { method: "POST", body: json(body) }),
   updateBasics: (id: number, body: LeagueBasics) =>

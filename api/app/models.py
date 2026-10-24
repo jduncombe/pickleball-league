@@ -34,7 +34,9 @@ class League(Base):
     name: Mapped[str] = mapped_column(String(120))
     num_teams: Mapped[int] = mapped_column(Integer)
     num_weeks: Mapped[int] = mapped_column(Integer)
-    rounds_per_week: Mapped[int] = mapped_column(Integer)
+    # Matches each team plays per week; rounds per week follow from it
+    # (see scheduling.py).
+    matches_per_week: Mapped[int] = mapped_column(Integer)
     num_courts: Mapped[int] = mapped_column(Integer)
     # Games are first to this many points, win by 2 (see scoring.py).
     points_to_win: Mapped[int] = mapped_column(Integer, default=11)
