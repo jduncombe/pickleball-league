@@ -6,11 +6,20 @@ import { api } from "@/lib/api";
 import { useLoader } from "@/lib/useLoader";
 import type { League } from "@/lib/types";
 import { LeagueNav } from "./LeagueNav";
+import { SetupBanner } from "./SetupBanner";
 import { ErrorBanner, Loading } from "./Status";
 
-type Props = { children: (league: League) => React.ReactNode };
+type Props = {
+  children: (league: League, reload: () => Promise<void>) => React.ReactNode;
+  /** Render children even while the league is in setup (the setup page itself). */
+  allowSetup?: boolean;
+};
 
-/** Loads the league named by `?id=` and renders its header + tabs above `children`. */
+/**
+ * Loads the league named by `?id=` and renders its header + tabs above
+ * `children`. While a league is in setup, other pages show a "continue setup"
+ * banner instead.
+ */
 export function LeagueShell(props: Props) {
   // useSearchParams needs a Suspense boundary in a static export.
   return (
@@ -20,9 +29,9 @@ export function LeagueShell(props: Props) {
   );
 }
 
-function LeagueShellInner({ children }: Props) {
+function LeagueShellInner({ children, allowSetup = false }: Props) {
   const leagueId = Number(useSearchParams().get("id"));
-  const { data: league, error } = useLoader(
+  const { data: league, error, reload } = useLoader(
     () => (leagueId ? api.getLeague(leagueId) : Promise.reject(new Error("No league selected"))),
     [leagueId],
   );
@@ -32,7 +41,7 @@ function LeagueShellInner({ children }: Props) {
   return (
     <>
       <LeagueNav league={league} />
-      {children(league)}
+      {league.status === "setup" && !allowSetup ? <SetupBanner league={league} /> : children(league, reload)}
     </>
   );
 }

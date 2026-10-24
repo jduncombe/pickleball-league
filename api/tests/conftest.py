@@ -13,6 +13,8 @@ from app import models  # noqa: E402, F401
 from app.database import Base, get_db  # noqa: E402
 from app.main import app  # noqa: E402
 
+from .helpers import set_up_league  # noqa: E402
+
 
 # Set TEST_DATABASE_URL (e.g. a throwaway Postgres) to run against a real server;
 # defaults to in-memory SQLite.
@@ -51,10 +53,5 @@ def client():
 
 @pytest.fixture()
 def league(client):
-    resp = client.post(
-        "/leagues",
-        json={"name": "Autumn", "num_teams": 4, "num_weeks": 2,
-              "rounds_per_week": 3, "num_courts": 1},
-    )
-    assert resp.status_code == 201
-    return resp.json()
+    """An active (created) league: 4 teams, 2 weeks x 3 rounds, 1 court."""
+    return set_up_league(client)

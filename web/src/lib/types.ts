@@ -2,30 +2,34 @@
 
 export type MatchStatus = "scheduled" | "in_progress" | "completed";
 
-export interface League {
-  id: number;
+/** "setup": basics/teams/players being entered or edited. "active": created, playable. */
+export type LeagueStatus = "setup" | "active";
+
+/** Setup step 1. */
+export interface LeagueBasics {
   name: string;
   num_teams: number;
   num_weeks: number;
   rounds_per_week: number;
   num_courts: number;
+  /** When false, teams are shown by their players' names. */
+  use_team_names: boolean;
+}
+
+export interface League extends LeagueBasics {
+  id: number;
+  status: LeagueStatus;
+  /** When the league was first created (setup finalised); null until then. */
+  created_league_at: string | null;
+  /** Once true, num_teams / num_weeks / rounds_per_week can't change. */
+  has_played_matches: boolean;
   current_week: number;
   created_at: string;
 }
 
-export interface LeagueCreate {
-  name: string;
-  num_teams: number;
-  num_weeks: number;
-  rounds_per_week: number;
-  num_courts: number;
-  /** One entry per team, in order. Teams are only created here, at setup. */
-  teams?: TeamSetup[];
-}
-
+/** Setup step 2, one per team in position order. */
 export interface TeamSetup {
-  /** Optional; unnamed teams are shown by their players' names. */
-  name?: string | null;
+  name: string | null;
   players: PlayerInput[];
 }
 
@@ -47,7 +51,7 @@ export interface PlayerInput {
 export interface TeamRef {
   id: number;
   name: string | null;
-  /** name, else the players' names ("Alex & Sam"), else "Team N". Use this for display. */
+  /** name (if the league uses team names), else the players' names ("Alex & Sam"), else "Team N". */
   display_name: string;
 }
 

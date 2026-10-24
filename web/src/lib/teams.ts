@@ -1,8 +1,13 @@
-// Mirrors Team.display_name in api/app/models.py, for previews before a team
-// exists. Anything already saved should use the API's display_name instead.
+// Mirrors Team.display_name in api/app/models.py, for previews while editing
+// setup. Anything already saved should use the API's display_name instead.
 
-export function teamDisplayName(name: string | null | undefined, playerNames: string[], position: number): string {
-  if (name?.trim()) return name.trim();
+export function teamDisplayName(
+  useTeamNames: boolean,
+  name: string | null | undefined,
+  playerNames: string[],
+  position: number,
+): string {
+  if (useTeamNames && name?.trim()) return name.trim();
   const names = playerNames.map((n) => n.trim()).filter(Boolean);
   if (names.length === 0) return `Team ${position}`;
   if (names.length === 1) return names[0];

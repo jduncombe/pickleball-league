@@ -72,7 +72,7 @@ export function LeagueDashboard({ leagueId }: { leagueId: number }) {
           ) : (
             <button
               className="secondary small"
-              onClick={() => act(() => api.updateLeague(league.id, { current_week: data.week }))}
+              onClick={() => act(() => api.setCurrentWeek(league.id, data.week))}
             >
               Make current week
             </button>

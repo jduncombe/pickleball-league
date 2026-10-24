@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ErrorBanner, Loading } from "@/components/Status";
 import { api } from "@/lib/api";
-import { leagueHref } from "@/lib/routes";
+import { leagueHref, setupHref } from "@/lib/routes";
 import { useLoader } from "@/lib/useLoader";
 
 export default function LeaguesPage() {
@@ -32,6 +32,7 @@ export default function LeaguesPage() {
               <th>Rounds / week</th>
               <th>Courts</th>
               <th>Current week</th>
+              <th>Status</th>
             </tr>
           </thead>
           <tbody>
@@ -45,6 +46,13 @@ export default function LeaguesPage() {
                 <td>{l.rounds_per_week}</td>
                 <td>{l.num_courts}</td>
                 <td>{l.current_week}</td>
+                <td>
+                  {l.status === "setup" ? (
+                    <Link href={setupHref(l.id, "basics")}>In setup</Link>
+                  ) : (
+                    "Active"
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>

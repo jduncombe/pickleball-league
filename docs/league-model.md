@@ -10,18 +10,50 @@
 | **Court** | A physical court. Courts limit how many matches run *simultaneously*; they don't change the schedule. |
 | **Match** | Team A vs Team B in a given week and round. Status: `scheduled` → `in_progress` (on a court) → `completed` (score recorded). |
 
-Teams are created **once, at league setup**: the setup form takes each team's
-optional name and its players (with optional email and DUPR ID). The league's
-full season schedule is generated immediately from those teams. Afterwards a
-team can be renamed, have its name cleared, or have its players corrected, but
-teams can't be added or removed, because the schedule depends on them.
+## Setup
 
-**Team names are optional.** Everywhere a team is shown, the app uses its
-display name:
+A league moves between two phases:
 
-1. the team name, if it has one;
+```
+ New league ──▶ SETUP ──"Create the league"──▶ ACTIVE
+                  ▲                               │
+                  └────────── "Edit setup" ◀──────┘
+```
+
+**Setup** is two steps:
+
+1. **League basics:** name, number of teams, weeks, rounds per week, courts,
+   and whether the league **uses team names**.
+2. **Teams & players:** each team's players (name, optional DUPR ID and
+   email), plus a name for each team if the league uses team names. Drafts
+   can be saved incomplete and resumed later.
+
+**Create the league** checks the setup is complete: every team needs at least
+one player, and a name if team names are on. It then builds the schedule and
+makes the league **active**. While active, teams and players are **fixed**
+(the Teams page is read-only). Player substitutes are planned for later.
+
+**Edit setup** puts an active league back into setup. Play is paused until
+it is finalised again ("Save & resume league"), and it can't be entered while
+a match is on court.
+
+- **Before any match has been played,** everything can change. Changing the
+  number of teams, weeks or rounds per week discards the schedule, which is
+  rebuilt when the league is created again.
+- **Once a match has been played,** those three are locked, because changing
+  them would invalidate results. The league name, courts, team names, players
+  and DUPR IDs can still change, and the schedule and results are kept.
+
+### Team names
+
+Every screen shows a team by its display name:
+
+1. its team name, if the league **uses team names** (the setting from step 1);
 2. otherwise its players' names: "Alex & Sam", or "Ann, Bo & Cy" for three;
-3. otherwise "Team N", where N is its position in the setup form.
+3. otherwise "Team N", where N is its position.
+
+Team names are kept even while the setting is off, so switching it back on
+restores them.
 
 ## Schedule generation
 
@@ -38,8 +70,9 @@ display name:
 Example: 8 teams, 3 rounds/week, 8 weeks → 24 slots, cycle of 7 rounds, 4
 matches per round, 96 matches total; each pairing is played 3–4 times.
 
-The schedule can be regenerated (`POST /leagues/{id}/schedule`) until the first
-match starts.
+The schedule is built when the league is created. It is rebuilt only if
+setup is edited to change the number of teams, weeks or rounds, which is
+possible only before any match has been played (see [Setup](#setup)).
 
 ## Courts and the live dashboard
 
