@@ -10,6 +10,18 @@ variable "project" {
   default     = "pickleball-league"
 }
 
+variable "brand" {
+  description = "White-label brand folder in web/brands/. Its terms.json is passed to the API so messages use the brand's terminology; build the web app with the same BRAND."
+  type        = string
+  default     = "default"
+}
+
+variable "app_name" {
+  description = "Product name shown by the API (docs title). Match the web brand when white-labelling."
+  type        = string
+  default     = "Pickleball League"
+}
+
 variable "environment" {
   description = "Environment name, used for tagging."
   type        = string

@@ -1,0 +1,40 @@
+/* Sample brand theme: overrides the same tokens as brands/default/theme.css. */
+
+:root {
+  --bg: #f7f5fc;
+  --surface: #ffffff;
+  --text: #1f1a33;
+  --muted: #6c6684;
+  --border: #e2ddf0;
+  --accent: #5b3fd1;
+  --accent-contrast: #ffffff;
+  --live: #c2410c;
+  --live-contrast: #ffffff;
+  --danger: #b42318;
+  --dupr: #0e7490;
+  --suggested-bg: #efeafd;
+  --font-body: "Helvetica Neue", Arial, sans-serif;
+  --font-heading: Georgia, "Times New Roman", serif;
+  --font-size: 15px;
+  --radius: 4px;
+  --radius-control: 4px;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #15121f;
+    --surface: #1e1a2c;
+    --text: #ece9f6;
+    --muted: #a19bb8;
+    --border: #322c47;
+    --accent: #a594ff;
+    --accent-contrast: #15121f;
+    --live: #fb923c;
+    --live-contrast: #1c0d03;
+    --danger: #f97066;
+    --dupr: #5ad1e6;
+    --suggested-bg: #2a2342;
+    color-scheme: dark;
+  }
+}

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ErrorBanner, Loading } from "@/components/Status";
 import { api } from "@/lib/api";
 import { leagueHref, setupHref } from "@/lib/routes";
+import { Term, term } from "@/lib/terms";
 import { useLoader } from "@/lib/useLoader";
 
 export default function LeaguesPage() {
@@ -12,26 +13,28 @@ export default function LeaguesPage() {
   return (
     <div className="stack">
       <div className="toolbar">
-        <h1>Leagues</h1>
+        <h1>{Term("league", 2)}</h1>
         <Link href="/leagues/new" className="button">
-          New league
+          New {term("league")}
         </Link>
       </div>
       <ErrorBanner message={error} />
       {!leagues ? (
         !error && <Loading />
       ) : leagues.length === 0 ? (
-        <p className="muted">No leagues yet.</p>
+        <p className="muted">No {term("league", 2)} yet.</p>
       ) : (
         <table>
           <thead>
             <tr>
               <th>Name</th>
-              <th>Teams</th>
-              <th>Weeks</th>
-              <th>Matches / week</th>
-              <th>Courts</th>
-              <th>Current week</th>
+              <th>{Term("team", 2)}</th>
+              <th>{Term("week", 2)}</th>
+              <th>
+                {Term("match", 2)} / {term("week")}
+              </th>
+              <th>{Term("court", 2)}</th>
+              <th>Current {term("week")}</th>
               <th>Status</th>
             </tr>
           </thead>

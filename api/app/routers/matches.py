@@ -7,6 +7,7 @@ from .. import schemas
 from ..deps import DB, get_or_404
 from ..models import LeagueStatus, Match, MatchStatus
 from ..scoring import check_score
+from ..terms import Term, term
 
 router = APIRouter(prefix="/matches", tags=["matches"])
 
@@ -15,7 +16,9 @@ def _get_playable(db, match_id: int) -> Match:
     """Fetch a match whose league is active (no play while a league is in setup)."""
     match = get_or_404(db, Match, match_id)
     if match.league.status != LeagueStatus.ACTIVE:
-        raise HTTPException(409, "League is in setup; create the league to resume play")
+        raise HTTPException(
+            409, f"{Term('league')} is in setup; create the {term('league')} to resume play"
+        )
     return match
 
 
@@ -29,7 +32,7 @@ def start_match(match_id: int, payload: schemas.MatchStart, db: DB):
     """Put a scheduled match on court. Both teams and the court must be free."""
     match = _get_playable(db, match_id)
     if match.status != MatchStatus.SCHEDULED:
-        raise HTTPException(409, f"Match is already {match.status.value}")
+        raise HTTPException(409, f"{Term('match')} is already {match.status.value.replace('_', ' ')}")
 
     in_progress = db.scalars(
         select(Match).where(
@@ -39,15 +42,15 @@ def start_match(match_id: int, payload: schemas.MatchStart, db: DB):
     ).all()
     busy_teams = {t for m in in_progress for t in (m.team_a_id, m.team_b_id)}
     if {match.team_a_id, match.team_b_id} & busy_teams:
-        raise HTTPException(409, "One of the teams is already playing")
+        raise HTTPException(409, f"One of the {term('team', 2)} is already playing")
 
     busy_courts = {m.court for m in in_progress}
     free_courts = [c for c in range(1, match.league.num_courts + 1) if c not in busy_courts]
     court = payload.court or (free_courts[0] if free_courts else None)
     if court is None:
-        raise HTTPException(409, "No free courts")
+        raise HTTPException(409, f"No free {term('court', 2)}")
     if court not in free_courts:
-        raise HTTPException(409, f"Court {court} is not available")
+        raise HTTPException(409, f"{Term('court')} {court} is not available")
 
     match.status = MatchStatus.IN_PROGRESS
     match.court = court
@@ -61,7 +64,7 @@ def cancel_match(match_id: int, db: DB):
     """Take an in-progress match off court and return it to the schedule."""
     match = _get_playable(db, match_id)
     if match.status != MatchStatus.IN_PROGRESS:
-        raise HTTPException(409, "Only in-progress matches can be cancelled")
+        raise HTTPException(409, f"Only in-progress {term('match', 2)} can be returned to the schedule")
     match.status = MatchStatus.SCHEDULED
     match.court = None
     match.started_at = None
@@ -106,7 +109,7 @@ def verify_result(match_id: int, db: DB):
     """Verify a completed match's result. The score is then locked for good."""
     match = _get_playable(db, match_id)
     if match.status != MatchStatus.COMPLETED:
-        raise HTTPException(409, "Only completed matches can be verified")
+        raise HTTPException(409, f"Only completed {term('match', 2)} can be verified")
     if match.verified_at is None:
         match.verified_at = datetime.now(timezone.utc)
         db.commit()

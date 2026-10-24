@@ -7,6 +7,7 @@ from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
+from .terms import Term
 
 
 def _now() -> datetime:
@@ -94,7 +95,7 @@ class Team(Base):
             return self.name
         names = [p.name for p in self.players]
         if not names:
-            return f"Team {self.position}"
+            return f"{Term('team')} {self.position}"
         if len(names) == 1:
             return names[0]
         return f"{', '.join(names[:-1])} & {names[-1]}"

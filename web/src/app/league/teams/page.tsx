@@ -3,6 +3,7 @@
 import { LeagueShell } from "@/components/LeagueShell";
 import { ErrorBanner, Loading } from "@/components/Status";
 import { api } from "@/lib/api";
+import { Term, term } from "@/lib/terms";
 import { useLoader } from "@/lib/useLoader";
 import type { League } from "@/lib/types";
 
@@ -19,21 +20,24 @@ function TeamList({ league }: { league: League }) {
   return (
     <div className="stack">
       <p className="muted">
-        Teams and players are fixed for the league. To change them, use <em>Edit setup</em>.
+        {Term("team", 2)} and {term("player", 2)} are fixed for the {term("league")}. To change them, use{" "}
+        <em>Edit setup</em>.
       </p>
       <div className="grid wide">
         {teams.map((team) => (
           <div key={team.id} className="card">
             <div className="card-head">
               <h3>{team.display_name}</h3>
-              <span className="muted">Team {team.position}</span>
+              <span className="muted">
+                {Term("team")} {team.position}
+              </span>
             </div>
             <table className="compact">
               <thead>
                 <tr>
-                  <th>Player</th>
-                  <th>DUPR ID</th>
-                  <th>Rating</th>
+                  <th>{Term("player")}</th>
+                  <th>{term("ratingId")}</th>
+                  <th>{Term("rating")}</th>
                   <th>Email</th>
                 </tr>
               </thead>

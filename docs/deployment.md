@@ -81,6 +81,10 @@ Terraform ≥ 1.10. You also need a VPC in ap-southeast-2 with:
    | `ECR_REPOSITORY_URL` | `123456789012.dkr.ecr.ap-southeast-2.amazonaws.com/pickleball-league-api` |
    | `TF_STATE_BUCKET` | `pickleball-league-tfstate-123456789012` |
 
+   Optional variables for [white-labelling](white-labelling.md): `BRAND`
+   (brand folder in `web/brands/`, default `default`) and `APP_NAME` (the
+   API's product name, default "Pickleball League").
+
    None of these are secret: the workflow authenticates with OIDC and there are
    no stored AWS keys. The deploy role only trusts jobs running in this
    repository's `production` environment. GitHub creates that environment on

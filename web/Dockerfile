@@ -7,7 +7,9 @@ ENV NEXT_TELEMETRY_DISABLED=1
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
-RUN npm run build
+# White-label brand: a folder in brands/ (see docs/white-labelling.md).
+ARG BRAND=default
+RUN BRAND=$BRAND npm run build
 
 FROM nginx:1.29-alpine
 # API_URL is substituted into the template at container start.

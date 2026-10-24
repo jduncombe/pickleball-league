@@ -92,6 +92,8 @@ jobs:
         run: >-
           terraform apply -input=false -auto-approve
           -var-file=production.tfvars
+          -var="app_name=${{ vars.APP_NAME || 'Pickleball League' }}"
+          -var="brand=${{ vars.BRAND || 'default' }}"
           -var="aws_region=${{ vars.AWS_REGION }}"
           -var="api_image=${{ env.API_IMAGE }}"
 
@@ -112,6 +114,8 @@ jobs:
 
       - name: Build static site
         working-directory: web
+        env:
+          BRAND: ${{ vars.BRAND || 'default' }} # white-label brand folder in web/brands/
         run: npm ci && npm run build
 
       - name: Upload to S3

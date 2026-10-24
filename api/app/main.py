@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .config import CORS_ORIGINS, ROOT_PATH
+from .config import APP_NAME, CORS_ORIGINS, ROOT_PATH
 from .database import init_db
 from .routers import leagues, matches, setup, teams
 
@@ -17,7 +17,7 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(
-    title="Pickleball League API",
+    title=f"{APP_NAME} API",
     version="0.1.0",
     description="Manage leagues, teams, players, schedules and match results.",
     lifespan=lifespan,

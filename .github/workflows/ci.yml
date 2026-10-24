@@ -72,6 +72,16 @@ jobs:
       - run: npm run build
       - name: Check static export
         run: test -f out/index.html && test -f out/league/teams/index.html && test -f out/404.html
+      # White-labelling: the sample brand must build, with none of the default
+      # brand's name leaking into it.
+      - name: Build the example brand
+        run: |
+          BRAND=example npm run build
+          grep -q "<title>Example Racquet Club</title>" out/index.html
+          if grep -rli "pickleball league" out/; then
+            echo "::error::Default brand name found in the example brand build"
+            exit 1
+          fi
 
   docker:
     name: Docker images build

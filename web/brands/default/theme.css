@@ -1,0 +1,50 @@
+/*
+ * Default brand theme. Every colour, font and shape the app uses is a token
+ * here; components only reference these variables (see src/app/globals.css).
+ * A brand overrides any of them. Light first, then dark.
+ */
+
+:root {
+  /* Surfaces and text */
+  --bg: #f6f7f4;
+  --surface: #ffffff;
+  --text: #1d2521;
+  --muted: #6b7570;
+  --border: #dde2dc;
+
+  /* Brand and states */
+  --accent: #2f7d4f; /* primary buttons, links, active tabs, winners */
+  --accent-contrast: #ffffff; /* text on --accent */
+  --live: #d9831f; /* matches on court */
+  --live-contrast: #ffffff; /* text on --live */
+  --danger: #c0392b; /* errors, invalid scores */
+  --dupr: #1d5fd1; /* teams whose players all have DUPR IDs */
+  --suggested-bg: #eaf5ee; /* highlighted "earliest round" matches */
+
+  /* Type and shape */
+  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-heading: var(--font-body);
+  --font-size: 15px;
+  --radius: 10px; /* cards */
+  --radius-control: 8px; /* buttons and inputs */
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #131714;
+    --surface: #1c221e;
+    --text: #e6ebe7;
+    --muted: #97a39c;
+    --border: #2d3630;
+    --accent: #5cbf83;
+    --accent-contrast: #0e1a12;
+    --live: #f0a14a;
+    --live-contrast: #1a1206;
+    --danger: #ef6f60;
+    --dupr: #7fb0ff;
+    --suggested-bg: #1f3326;
+    color-scheme: dark;
+  }
+}

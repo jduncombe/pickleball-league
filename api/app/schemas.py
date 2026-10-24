@@ -6,6 +6,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from .models import LeagueStatus, MatchStatus
+from .terms import count, term
 
 
 class ORMModel(BaseModel):
@@ -30,10 +31,10 @@ class LeagueBasics(BaseModel):
     @model_validator(mode="after")
     def matches_fit_opponents(self):
         if self.matches_per_week > self.num_teams - 1:
-            most = self.num_teams - 1
             raise ValueError(
-                f"With {self.num_teams} teams, each team can play at most {most} "
-                f"match{'es' if most != 1 else ''} per week (one against each other team)"
+                f"With {count(self.num_teams, 'team')}, each {term('team')} can play at most "
+                f"{count(self.num_teams - 1, 'match')} per {term('week')} "
+                f"(one against each other {term('team')})"
             )
         return self
 

@@ -27,6 +27,9 @@ DATABASE_URL = _database_url()
 # (e.g. "/api" behind CloudFront or nginx). Only affects generated docs URLs.
 ROOT_PATH = os.getenv("ROOT_PATH", "")
 
+# Product name shown in the API docs; match the web brand (white-labelling).
+APP_NAME = os.getenv("APP_NAME", "Pickleball League")
+
 # Comma-separated list of origins allowed to call the API from a browser.
 CORS_ORIGINS = [
     origin.strip()

@@ -7,9 +7,10 @@ import { LeagueNav } from "@/components/LeagueNav";
 import { SetupBanner } from "@/components/SetupBanner";
 import { ErrorBanner, Loading } from "@/components/Status";
 import { api } from "@/lib/api";
+import { Term, a, term } from "@/lib/terms";
 import { useLoader } from "@/lib/useLoader";
 
-const STORAGE_KEY = "pickleball:lastLeague";
+const STORAGE_KEY = "lastLeague";
 
 /** Default screen: the live board for the last-viewed (or newest) league. */
 export default function HomePage() {
@@ -40,12 +41,13 @@ export default function HomePage() {
   if (leagues.length === 0) {
     return (
       <div className="empty">
-        <h1>No leagues yet</h1>
+        <h1>No {term("league", 2)} yet</h1>
         <p className="muted">
-          Set up a league (basics, then teams and players) to generate a round-robin schedule.
+          Set up {a("league")} (basics, then {term("team", 2)} and {term("player", 2)}) to generate a
+          schedule.
         </p>
         <Link href="/leagues/new" className="button">
-          Create a league
+          Create {a("league")}
         </Link>
       </div>
     );
@@ -58,7 +60,7 @@ export default function HomePage() {
     <>
       {leagues.length > 1 && (
         <label className="league-picker">
-          League{" "}
+          {Term("league")}{" "}
           <select value={league.id} onChange={(e) => choose(Number(e.target.value))}>
             {leagues.map((l) => (
               <option key={l.id} value={l.id}>

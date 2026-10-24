@@ -66,6 +66,9 @@ hides the difference; the API test suite runs against both in CI.
 | `CORS_ORIGINS` | api | `http://localhost:3000` | Comma-separated origins allowed to call the API directly from a browser |
 | `API_URL` | web (dev server, nginx image) | `http://localhost:8000` / `http://api:8000` | Where `/api/*` is forwarded |
 | `NEXT_PUBLIC_API_URL` | web (build time) | `/api` | Base URL the browser uses for API calls |
+| `BRAND` | web (build time) | `default` | White-label brand folder in `web/brands/` ([white-labelling.md](white-labelling.md)) |
+| `APP_NAME` | api | `Pickleball League` | Product name in the API docs title |
+| `TERMS_FILE` / `TERMS_JSON` | api | default terms | The brand's terminology table (a path to its `terms.json`, or the JSON itself) for API messages ([white-labelling.md](white-labelling.md)) |
 | `TEST_DATABASE_URL` | api tests | in-memory SQLite | Run the tests against another database (CI uses Postgres) |
 
 ## Testing

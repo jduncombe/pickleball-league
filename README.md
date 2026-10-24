@@ -70,6 +70,7 @@ npm run dev                             # http://localhost:3000 (/api/* forwarde
 
 - [Architecture](docs/architecture.md) — components, request flow, configuration, next steps
 - [Deployment](docs/deployment.md) — AWS architecture, one-time setup, CI/CD, operations, costs
+- [White-labelling](docs/white-labelling.md) — brand name, logos, colours and fonts per deployment (`BRAND=…`)
 - [League model & scheduling](docs/league-model.md) — weeks, rounds, courts, and how the dashboard decides what's playable
 - [API reference](docs/api.md) — endpoints and payloads
 - [DUPR integration plan](docs/dupr-integration.md) — what's stored today and how the integration will plug in
@@ -93,6 +94,7 @@ npm run dev                             # http://localhost:3000 (/api/* forwarde
 │   ├── src/app/            # pages (static export)
 │   ├── src/components/     # dashboard, forms, nav
 │   ├── src/lib/            # typed API client, types, hooks
+│   ├── brands/             # white-label brands (name, logos, theme): default, example
 │   ├── nginx.conf.template # local serving + /api proxy
 │   └── Dockerfile
 ├── infra/

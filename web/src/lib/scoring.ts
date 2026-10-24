@@ -1,6 +1,8 @@
 // Pickleball game-score rules: first to N points, win by 2. Mirrors
 // api/app/scoring.py (the API enforces them; this is for instant feedback).
 
+import { a, term } from "./terms";
+
 export type ScoreField = "score_a" | "score_b";
 
 export interface ScoreProblem {
@@ -36,13 +38,13 @@ export function checkScore(scoreA: number, scoreB: number, pointsToWin: number):
   }
   if (high - low < 2) {
     return {
-      message: `${entered} isn't finished: a game must be won by 2, so play continues (e.g. ${exampleWin(n, low)})`,
+      message: `${entered} isn't finished: ${a("game")} must be won by 2, so play continues (e.g. ${exampleWin(n, low)})`,
       fields: [loser],
     };
   }
   if (high > n && high - low > 2) {
     return {
-      message: `${entered} isn't possible: the game ends as soon as one side has ${n}+ points and leads by 2 (e.g. ${exampleWin(n, low)})`,
+      message: `${entered} isn't possible: the ${term("game")} ends as soon as one side has ${n}+ points and leads by 2 (e.g. ${exampleWin(n, low)})`,
       fields: [winner],
     };
   }
