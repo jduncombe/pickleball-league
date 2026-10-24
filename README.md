@@ -60,10 +60,11 @@ npm run dev                             # http://localhost:3000 (/api/* forwarde
 | Screen | Route | What it does |
 | --- | --- | --- |
 | **Live dashboard** (default) | `/` and `/league/?id=…` | Teams on court right now, and this week's match-ups that can start because neither team is playing. Start a match on a free court, enter its score, or return it to the schedule. |
-| League creation | `/leagues/new` | Name, number of teams, weeks, rounds per week and courts, plus each team: an **optional name** and its players (optional email and **DUPR ID**). Teams are created once, here, along with the full season schedule. |
-| Teams & players | `/league/teams/?id=…` | Correct teams after setup: set or clear a team's name, add or remove players. Teams without a name are shown by their players' names. |
+| League setup, step 1 | `/leagues/new`, then `/league/setup/?id=…&step=basics` | Name, number of teams, weeks, rounds per week, courts, and **whether to use team names**. |
+| League setup, step 2 | `/league/setup/?id=…&step=players` | Each team's players (optional **DUPR ID** and email), plus team names if enabled. Save a draft, or **Create the league**, which builds the schedule and fixes teams and players. **Edit setup** (in the league header) reopens both steps later. |
+| Teams & players | `/league/teams/?id=…` | Read-only list of teams and players. Teams without names are shown by their players' names. |
 | Schedule & results | `/league/matches/?id=…` | Week-by-week schedule grouped by round, score entry/correction, standings. |
-| Leagues | `/leagues` | All leagues. |
+| Leagues | `/leagues` | All leagues, with a link back into setup for any league not yet created. |
 
 ## Documentation
 

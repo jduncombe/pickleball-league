@@ -5,9 +5,17 @@ from sqlalchemy import select
 
 from .. import schemas
 from ..deps import DB, get_or_404
-from ..models import Match, MatchStatus
+from ..models import LeagueStatus, Match, MatchStatus
 
 router = APIRouter(prefix="/matches", tags=["matches"])
+
+
+def _get_playable(db, match_id: int) -> Match:
+    """Fetch a match whose league is active (no play while a league is in setup)."""
+    match = get_or_404(db, Match, match_id)
+    if match.league.status != LeagueStatus.ACTIVE:
+        raise HTTPException(409, "League is in setup; create the league to resume play")
+    return match
 
 
 @router.get("/{match_id}", response_model=schemas.MatchRead)
@@ -18,7 +26,7 @@ def get_match(match_id: int, db: DB):
 @router.post("/{match_id}/start", response_model=schemas.MatchRead)
 def start_match(match_id: int, payload: schemas.MatchStart, db: DB):
     """Put a scheduled match on court. Both teams and the court must be free."""
-    match = get_or_404(db, Match, match_id)
+    match = _get_playable(db, match_id)
     if match.status != MatchStatus.SCHEDULED:
         raise HTTPException(409, f"Match is already {match.status.value}")
 
@@ -50,7 +58,7 @@ def start_match(match_id: int, payload: schemas.MatchStart, db: DB):
 @router.post("/{match_id}/cancel", response_model=schemas.MatchRead)
 def cancel_match(match_id: int, db: DB):
     """Take an in-progress match off court and return it to the schedule."""
-    match = get_or_404(db, Match, match_id)
+    match = _get_playable(db, match_id)
     if match.status != MatchStatus.IN_PROGRESS:
         raise HTTPException(409, "Only in-progress matches can be cancelled")
     match.status = MatchStatus.SCHEDULED
@@ -63,7 +71,7 @@ def cancel_match(match_id: int, db: DB):
 @router.put("/{match_id}/result", response_model=schemas.MatchRead)
 def record_result(match_id: int, payload: schemas.MatchResult, db: DB):
     """Record (or correct) a final score. Frees the court if the match was on one."""
-    match = get_or_404(db, Match, match_id)
+    match = _get_playable(db, match_id)
     match.score_a = payload.score_a
     match.score_b = payload.score_b
     match.status = MatchStatus.COMPLETED

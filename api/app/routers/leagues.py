@@ -3,49 +3,14 @@ from sqlalchemy import select
 
 from .. import schemas
 from ..deps import DB, get_or_404
-from ..models import League, Match, MatchStatus, Player, Team
-from ..scheduling import build_schedule
+from ..models import League, Match, MatchStatus
 
 router = APIRouter(prefix="/leagues", tags=["leagues"])
-
-
-def _generate_matches(league: League) -> list[Match]:
-    team_ids = [team.id for team in league.teams]
-    return [
-        Match(league_id=league.id, week=week, round=rnd, team_a_id=a, team_b_id=b)
-        for week, rnd, (a, b) in build_schedule(
-            team_ids, league.num_weeks, league.rounds_per_week
-        )
-    ]
 
 
 @router.get("", response_model=list[schemas.LeagueRead])
 def list_leagues(db: DB):
     return db.scalars(select(League).order_by(League.created_at.desc())).all()
-
-
-@router.post("", response_model=schemas.LeagueRead, status_code=201)
-def create_league(payload: schemas.LeagueCreate, db: DB):
-    """Create a league with its teams (and their players) and a round-robin schedule.
-
-    This is the only place teams are created; afterwards they can be renamed
-    and their players edited, but not added or removed.
-    """
-    league = League(**payload.model_dump(exclude={"teams"}))
-    setups = payload.teams or [schemas.TeamSetup() for _ in range(payload.num_teams)]
-    league.teams = [
-        Team(
-            position=position,
-            name=setup.name,
-            players=[Player(**p.model_dump()) for p in setup.players],
-        )
-        for position, setup in enumerate(setups, start=1)
-    ]
-    db.add(league)
-    db.flush()  # assign team ids before building the schedule
-    db.add_all(_generate_matches(league))
-    db.commit()
-    return league
 
 
 @router.get("/{league_id}", response_model=schemas.LeagueRead)
@@ -69,19 +34,6 @@ def update_league(league_id: int, payload: schemas.LeagueUpdate, db: DB):
 def delete_league(league_id: int, db: DB):
     db.delete(get_or_404(db, League, league_id))
     db.commit()
-
-
-@router.post("/{league_id}/schedule", response_model=list[schemas.MatchRead])
-def regenerate_schedule(league_id: int, db: DB):
-    """Throw away and rebuild the schedule. Refused once any match has started."""
-    league = get_or_404(db, League, league_id)
-    if any(m.status != MatchStatus.SCHEDULED for m in league.matches):
-        raise HTTPException(409, "Cannot regenerate a schedule once matches have started")
-    league.matches.clear()
-    db.flush()
-    league.matches.extend(_generate_matches(league))
-    db.commit()
-    return sorted(league.matches, key=lambda m: (m.week, m.round, m.id))
 
 
 @router.get("/{league_id}/teams", response_model=list[schemas.TeamRead])

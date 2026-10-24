@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { LeagueDashboard } from "@/components/LeagueDashboard";
 import { LeagueNav } from "@/components/LeagueNav";
+import { SetupBanner } from "@/components/SetupBanner";
 import { ErrorBanner, Loading } from "@/components/Status";
 import { api } from "@/lib/api";
 import { useLoader } from "@/lib/useLoader";
@@ -40,7 +41,9 @@ export default function HomePage() {
     return (
       <div className="empty">
         <h1>No leagues yet</h1>
-        <p className="muted">Create a league to generate teams and a round-robin schedule.</p>
+        <p className="muted">
+          Set up a league (basics, then teams and players) to generate a round-robin schedule.
+        </p>
         <Link href="/leagues/new" className="button">
           Create a league
         </Link>
@@ -66,7 +69,11 @@ export default function HomePage() {
         </label>
       )}
       <LeagueNav league={league} />
-      <LeagueDashboard key={league.id} leagueId={league.id} />
+      {league.status === "setup" ? (
+        <SetupBanner league={league} />
+      ) : (
+        <LeagueDashboard key={league.id} leagueId={league.id} />
+      )}
     </>
   );
 }

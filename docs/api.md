@@ -14,38 +14,17 @@ Errors use FastAPI's format: `{"detail": "message"}` for 404/409, and
 | Method | Path | Description |
 | --- | --- | --- |
 | `GET` | `/leagues` | List leagues, newest first |
-| `POST` | `/leagues` | Create a league with its teams (and players) + schedule |
 | `GET` | `/leagues/{id}` | Get a league |
-| `PATCH` | `/leagues/{id}` | Update `name`, `num_courts`, `current_week` |
+| `PATCH` | `/leagues/{id}` | Set `current_week` |
 | `DELETE` | `/leagues/{id}` | Delete a league and everything in it |
-| `POST` | `/leagues/{id}/schedule` | Regenerate the schedule (409 once any match has started) |
-| `GET` | `/leagues/{id}/teams` | Teams with their players |
+| `GET` | `/leagues/{id}/teams` | Teams with their players, in position order |
 | `GET` | `/leagues/{id}/matches?week=&status=` | Matches, optionally filtered |
 | `GET` | `/leagues/{id}/dashboard?week=` | Live view (defaults to `current_week`) |
 | `GET` | `/leagues/{id}/standings` | Standings table |
 
-Create a league:
-
-```http
-POST /leagues
-{
-  "name": "Tuesday Night Doubles",
-  "num_teams": 3,          // 2–64
-  "num_weeks": 8,          // 1–52
-  "rounds_per_week": 3,    // 1–20
-  "num_courts": 4,         // 1–50
-  "teams": [               // optional; if given, exactly num_teams entries, in order
-    { "name": "Dink Dynasty",
-      "players": [{ "name": "Alex" }, { "name": "Sam", "dupr_id": "4KX92L" }] },
-    { "players": [{ "name": "Jo" }, { "name": "Kim" }] },   // no name -> "Jo & Kim"
-    {}                                                     // -> "Team 3"
-  ]
-}
-```
-
-Teams are only created here, once. Afterwards they can be renamed (or have
-their name cleared) and their players edited, but teams can't be added or
-removed. Omitting `teams` creates `num_teams` unnamed teams with no players.
+League objects include `status` (`"setup"` or `"active"`), `use_team_names`,
+`created_league_at` (when setup was first finalised, else `null`) and
+`has_played_matches`.
 
 Dashboard response:
 
@@ -62,33 +41,77 @@ Dashboard response:
 }
 ```
 
-## Teams & players
+## League setup
+
+A league is created **in setup**. Basics, teams and players can only be
+changed while it is in setup; "create the league" makes it **active**
+(schedule built, play allowed, teams and players fixed). "Edit setup" puts it
+back into setup, pausing play until it is finalised again. See
+[league-model.md](league-model.md#setup) for the rules.
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `POST` | `/leagues` | Step 1 for a new league: basics. Creates the league in setup with `num_teams` empty teams. |
+| `PUT` | `/leagues/{id}/setup` | Step 1 again: replace the basics. Adds or removes teams at the end to match `num_teams`. 409 if not in setup, or if changing `num_teams`/`num_weeks`/`rounds_per_week` after matches have been played. |
+| `PUT` | `/leagues/{id}/teams` | Step 2: names and players for every team (exactly `num_teams` entries, in order). Replaces players. 409 if not in setup. Drafts may be incomplete. |
+| `POST` | `/leagues/{id}/finalize` | **Create the league.** 422 listing problems if a team has no players, or has no name when `use_team_names` is on. Builds the schedule if there isn't one, sets `status: "active"`. |
+| `POST` | `/leagues/{id}/edit` | **Edit setup.** Back to `status: "setup"`. 409 while a match is on court. |
+
+Basics (step 1):
+
+```json
+{
+  "name": "Tuesday Night Doubles",
+  "num_teams": 8,
+  "num_weeks": 8,
+  "rounds_per_week": 3,
+  "num_courts": 4,
+  "use_team_names": false
+}
+```
+
+Limits: teams 2–64, weeks 1–52, rounds per week 1–20, courts 1–50.
+
+Teams (step 2):
+
+```json
+{
+  "teams": [
+    { "name": "Dink Dynasty",
+      "players": [{ "name": "Alex" }, { "name": "Sam", "dupr_id": "4KX92L", "email": "sam@example.com" }] },
+    { "name": null, "players": [{ "name": "Jo" }, { "name": "Kim" }] }
+  ]
+}
+```
+
+Player `email` and `dupr_id` are optional; blank strings are stored as
+`null`. `dupr_id` must be 4–12 letters/digits and is upper-cased.
+`dupr_rating` is read-only and reserved for the DUPR integration. Team names
+are stored even when `use_team_names` is off, so switching it off and on
+again doesn't lose them.
+
+## Teams
 
 | Method | Path | Description |
 | --- | --- | --- |
 | `GET` | `/teams/{id}` | Team with players |
-| `PATCH` | `/teams/{id}` | Set the name: `{"name": "Dink Dynasty"}`; `null` or `""` clears it |
-| `POST` | `/teams/{id}/players` | Add a player |
-| `PATCH` | `/players/{id}` | Update a player |
-| `DELETE` | `/players/{id}` | Remove a player |
 
-Player payload:
+Teams and players have no write endpoints of their own; they change only
+through league setup.
 
-```json
-{ "name": "Sam Rivera", "email": "sam@example.com", "dupr_id": "4KX92L" }
-```
+Team objects, and the `team_a`/`team_b`/`team` references in matches and
+standings, carry `name` and **`display_name`**. Clients should show
+`display_name`:
 
-Team objects (and the `team_a`/`team_b`/`team` references in matches and
-standings) carry both `name` (optional, may be `null`) and **`display_name`**,
-which clients should show: the name if set, otherwise the players' names
-(`"Alex & Sam"`, or `"Ann, Bo & Cy"` for three), otherwise `"Team <position>"`.
-Full team objects also have `position` (1-based setup order).
+1. the team name, if the league uses team names and it is set;
+2. otherwise the players' names (`"Alex & Sam"`, or `"Ann, Bo & Cy"` for three);
+3. otherwise `"Team <position>"`.
 
-`email` and `dupr_id` are optional; blank strings are stored as `null`.
-`dupr_id` must be 4–12 letters/digits and is upper-cased. `dupr_rating` is
-read-only and reserved for the DUPR integration.
+Full team objects also have `position` (1-based).
 
 ## Matches
+
+Match actions (start, cancel, result) return 409 while the league is in setup.
 
 | Method | Path | Description |
 | --- | --- | --- |

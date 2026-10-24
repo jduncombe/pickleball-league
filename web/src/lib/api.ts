@@ -5,16 +5,7 @@
 // `npm run dev` (see next.config.ts). NEXT_PUBLIC_API_URL overrides this at
 // build time, e.g. to call the API directly (needs CORS_ORIGINS on the API).
 
-import type {
-  Dashboard,
-  League,
-  LeagueCreate,
-  Match,
-  Player,
-  PlayerInput,
-  StandingRow,
-  Team,
-} from "./types";
+import type { Dashboard, League, LeagueBasics, Match, StandingRow, Team, TeamSetup } from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "/api";
 
@@ -57,25 +48,24 @@ export const api = {
   // Leagues
   listLeagues: () => request<League[]>("/leagues"),
   getLeague: (id: number) => request<League>(`/leagues/${id}`),
-  createLeague: (body: LeagueCreate) =>
-    request<League>("/leagues", { method: "POST", body: json(body) }),
-  updateLeague: (id: number, body: Partial<Pick<League, "name" | "num_courts" | "current_week">>) =>
-    request<League>(`/leagues/${id}`, { method: "PATCH", body: json(body) }),
+  setCurrentWeek: (id: number, current_week: number) =>
+    request<League>(`/leagues/${id}`, { method: "PATCH", body: json({ current_week }) }),
   dashboard: (id: number, week?: number) =>
     request<Dashboard>(`/leagues/${id}/dashboard${week ? `?week=${week}` : ""}`),
   standings: (id: number) => request<StandingRow[]>(`/leagues/${id}/standings`),
-
-  // Teams & players
   listTeams: (leagueId: number) => request<Team[]>(`/leagues/${leagueId}/teams`),
-  /** Set the team's name; an empty string clears it. */
-  renameTeam: (teamId: number, name: string) =>
-    request<Team>(`/teams/${teamId}`, { method: "PATCH", body: json({ name }) }),
-  addPlayer: (teamId: number, body: PlayerInput) =>
-    request<Player>(`/teams/${teamId}/players`, { method: "POST", body: json(body) }),
-  updatePlayer: (playerId: number, body: Partial<PlayerInput>) =>
-    request<Player>(`/players/${playerId}`, { method: "PATCH", body: json(body) }),
-  deletePlayer: (playerId: number) =>
-    request<void>(`/players/${playerId}`, { method: "DELETE" }),
+
+  // Setup (teams and players can only be changed while a league is in setup)
+  createLeague: (body: LeagueBasics) =>
+    request<League>("/leagues", { method: "POST", body: json(body) }),
+  updateBasics: (id: number, body: LeagueBasics) =>
+    request<League>(`/leagues/${id}/setup`, { method: "PUT", body: json(body) }),
+  updateTeams: (id: number, teams: TeamSetup[]) =>
+    request<Team[]>(`/leagues/${id}/teams`, { method: "PUT", body: json({ teams }) }),
+  /** "Create the league": validate setup, build the schedule, make it active. */
+  finalizeSetup: (id: number) => request<League>(`/leagues/${id}/finalize`, { method: "POST" }),
+  /** "Edit setup": put an active league back into setup. */
+  editSetup: (id: number) => request<League>(`/leagues/${id}/edit`, { method: "POST" }),
 
   // Matches
   listMatches: (leagueId: number, week?: number) =>

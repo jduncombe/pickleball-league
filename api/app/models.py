@@ -3,7 +3,7 @@
 import enum
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
@@ -19,6 +19,14 @@ class MatchStatus(str, enum.Enum):
     COMPLETED = "completed"
 
 
+class LeagueStatus(str, enum.Enum):
+    # Basics, teams and players are being entered or edited; no play.
+    SETUP = "setup"
+    # Setup finalised ("Create the league"): schedule exists, teams and
+    # players are fixed, matches can be played.
+    ACTIVE = "active"
+
+
 class League(Base):
     __tablename__ = "leagues"
 
@@ -28,6 +36,16 @@ class League(Base):
     num_weeks: Mapped[int] = mapped_column(Integer)
     rounds_per_week: Mapped[int] = mapped_column(Integer)
     num_courts: Mapped[int] = mapped_column(Integer)
+    # When false, teams are known by their players' names (see Team.display_name).
+    use_team_names: Mapped[bool] = mapped_column(Boolean, default=False)
+    status: Mapped[LeagueStatus] = mapped_column(
+        Enum(LeagueStatus, values_callable=lambda e: [m.value for m in e]),
+        default=LeagueStatus.SETUP,
+    )
+    # First time setup was finalised; stays set while the league is re-edited.
+    created_league_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     current_week: Mapped[int] = mapped_column(Integer, default=1)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
@@ -38,6 +56,11 @@ class League(Base):
         back_populates="league", cascade="all, delete-orphan"
     )
 
+    @property
+    def has_played_matches(self) -> bool:
+        """True once any match has started; the season's shape is then fixed."""
+        return any(m.status != MatchStatus.SCHEDULED for m in self.matches)
+
 
 class Team(Base):
     __tablename__ = "teams"
@@ -46,7 +69,7 @@ class Team(Base):
     league_id: Mapped[int] = mapped_column(ForeignKey("leagues.id", ondelete="CASCADE"))
     # 1-based order within the league, fixed at setup.
     position: Mapped[int] = mapped_column(Integer)
-    # Optional; see display_name.
+    # Only used when the league uses team names; see display_name.
     name: Mapped[str | None] = mapped_column(String(120), nullable=True)
 
     league: Mapped[League] = relationship(back_populates="teams")
@@ -56,8 +79,9 @@ class Team(Base):
 
     @property
     def display_name(self) -> str:
-        """The team name, else its players' names ("Alex & Sam"), else "Team N"."""
-        if self.name:
+        """The team name (if the league uses them), else its players' names
+        ("Alex & Sam"), else "Team N"."""
+        if self.league.use_team_names and self.name:
             return self.name
         names = [p.name for p in self.players]
         if not names:

@@ -2,9 +2,9 @@
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from .models import MatchStatus
+from .models import LeagueStatus, MatchStatus
 
 
 class ORMModel(BaseModel):
@@ -14,26 +14,20 @@ class ORMModel(BaseModel):
 # --- Leagues -----------------------------------------------------------------
 
 
-class LeagueCreate(BaseModel):
+class LeagueBasics(BaseModel):
+    """Setup step 1. Used to create a league and to edit it during setup."""
+
     name: str = Field(min_length=1, max_length=120)
     num_teams: int = Field(ge=2, le=64)
     num_weeks: int = Field(ge=1, le=52)
     rounds_per_week: int = Field(ge=1, le=20)
     num_courts: int = Field(ge=1, le=50)
-    # Teams are created once, here, in this order. If omitted, num_teams
-    # unnamed teams without players are created (shown as "Team 1", ...).
-    teams: list["TeamSetup"] | None = None
-
-    @model_validator(mode="after")
-    def teams_match_count(self):
-        if self.teams is not None and len(self.teams) != self.num_teams:
-            raise ValueError(f"expected {self.num_teams} teams, got {len(self.teams)}")
-        return self
+    use_team_names: bool = False
 
 
 class LeagueUpdate(BaseModel):
-    name: str | None = Field(default=None, min_length=1, max_length=120)
-    num_courts: int | None = Field(default=None, ge=1, le=50)
+    """Changes allowed while a league is active (setup details go through setup)."""
+
     current_week: int | None = Field(default=None, ge=1)
 
 
@@ -44,6 +38,11 @@ class LeagueRead(ORMModel):
     num_weeks: int
     rounds_per_week: int
     num_courts: int
+    use_team_names: bool
+    status: LeagueStatus
+    created_league_at: datetime | None
+    # Once true, num_teams/num_weeks/rounds_per_week can't change in setup.
+    has_played_matches: bool
     current_week: int
     created_at: datetime
 
@@ -81,9 +80,10 @@ class PlayerFields(BaseModel):
 class PlayerCreate(PlayerFields):
     name: str = Field(min_length=1, max_length=120)
 
-
-class PlayerUpdate(PlayerFields):
-    name: str | None = Field(default=None, min_length=1, max_length=120)
+    @field_validator("name", mode="before")
+    @classmethod
+    def strip_name(cls, value):
+        return value.strip() if isinstance(value, str) else value
 
 
 class PlayerRead(ORMModel):
@@ -98,9 +98,11 @@ class PlayerRead(ORMModel):
 # --- Teams -------------------------------------------------------------------
 
 
-class TeamName(BaseModel):
-    # Optional: blank means "no name", and the team is shown by its players' names.
+class TeamSetup(BaseModel):
+    """One team in setup step 2. Ignored name if the league doesn't use team names."""
+
     name: str | None = Field(default=None, max_length=120)
+    players: list[PlayerCreate] = Field(default_factory=list, max_length=20)
 
     @field_validator("name", mode="before")
     @classmethod
@@ -108,12 +110,10 @@ class TeamName(BaseModel):
         return _clean_optional(value)
 
 
-class TeamSetup(TeamName):
-    players: list[PlayerCreate] = Field(default_factory=list, max_length=20)
+class TeamsSetup(BaseModel):
+    """Setup step 2: every team, in position order (exactly num_teams entries)."""
 
-
-class TeamUpdate(TeamName):
-    pass
+    teams: list[TeamSetup]
 
 
 class TeamRef(ORMModel):
@@ -187,5 +187,3 @@ class StandingRow(BaseModel):
     points_against: int
     point_diff: int
 
-
-LeagueCreate.model_rebuild()

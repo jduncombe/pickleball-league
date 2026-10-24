@@ -15,9 +15,11 @@ npm run build                # static export to out/
 | Path | Purpose |
 | --- | --- |
 | `src/app/page.tsx` | Default screen: live dashboard for the last-viewed league |
-| `src/app/leagues/new/` | League creation |
+| `src/app/leagues/new/` | New league: setup step 1 (basics) |
 | `src/app/league/` | Live dashboard for one league (`/league/?id=…`) |
-| `src/app/league/teams/` | Teams & players (DUPR IDs) |
+| `src/app/league/teams/` | Teams & players (read-only once the league is created) |
+| `src/app/league/setup/` | League setup steps 1–2, "Create the league", edit setup |
+| `src/components/setup/` | Setup forms (basics, teams & players) |
 | `src/app/league/matches/` | Schedule, result entry, standings |
 | `src/lib/api.ts` | Typed API client (same-origin `/api`) |
 | `src/lib/routes.ts` | Builds league page URLs |
