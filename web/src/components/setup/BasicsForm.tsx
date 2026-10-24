@@ -43,6 +43,8 @@ export function BasicsForm({
   const matchesPerRound = Math.floor(form.num_teams / 2);
   const wavesPerRound = Math.ceil(matchesPerRound / Math.max(form.num_courts, 1));
   const totalMatches = matchesPerRound * form.rounds_per_week * form.num_weeks;
+  const n = form.points_to_win;
+  const exampleScores = `${n}-${n - 2} or ${n + 1}-${n - 1}`;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -107,7 +109,7 @@ export function BasicsForm({
         <small className="muted">
           {lockedAfterPlay
             ? "Fixed: matches have been played."
-            : `Games are first to ${form.points_to_win}, win by 2 (e.g. ${form.points_to_win}-${form.points_to_win - 2} or ${form.points_to_win + 1}-${form.points_to_win - 1}).`}
+            : `Games are first to ${n}, win by 2 (e.g. ${exampleScores}).`}
         </small>
       </label>
 
@@ -127,12 +129,17 @@ export function BasicsForm({
         </span>
       </label>
 
-      <p className="card summary">
-        {matchesPerRound} matches per round
-        {form.num_teams % 2 === 1 && " (one team sits out each round)"} · {totalMatches} matches in
-        the season · each round plays in {wavesPerRound} wave{wavesPerRound === 1 ? "" : "s"} on{" "}
-        {form.num_courts} court{form.num_courts === 1 ? "" : "s"}.
-      </p>
+      <div className="card summary">
+        <p>
+          {matchesPerRound} matches per round
+          {form.num_teams % 2 === 1 && " (one team sits out each round)"} · {totalMatches} matches
+          in the season · each round plays in {wavesPerRound} wave{wavesPerRound === 1 ? "" : "s"}{" "}
+          on {form.num_courts} court{form.num_courts === 1 ? "" : "s"}.
+        </p>
+        <p>
+          Games are first to {form.points_to_win}, win by 2 (e.g. {exampleScores}); no ties.
+        </p>
+      </div>
 
       <div>
         <button type="submit" disabled={saving}>

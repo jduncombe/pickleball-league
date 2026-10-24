@@ -109,6 +109,8 @@ input:user-invalid { border-color: var(--danger); }
 }
 .card.live { border-color: var(--live); }
 .card.summary { margin: 0; display: block; }
+.card.summary p { margin: 0; }
+.card.summary p + p { margin-top: 6px; }
 .card-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
 .grid.wide { grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); }
