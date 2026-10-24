@@ -1,14 +1,15 @@
 # White-labelling
 
-The web app's name, copy, logos, favicon, colours, fonts and corner shape all
-come from a **brand**: a folder in [`web/brands/`](../web/brands). The brand
+The web app's name, copy, logos, favicon, colours, fonts, corner shape and
+**terminology** (what a league, team, match… is called) all come from a
+**brand**: a folder in [`web/brands/`](../web/brands). The brand
 is chosen when the site is built, so each deployment is one brand, and pages
 never flash a default name while a config file loads.
 
 | Brand | What it is |
 | --- | --- |
 | `default` | The standard "Pickleball League" look. Used when no brand is given. |
-| `example` | A sample brand ("Example Racquet Club"): different colours, fonts, corner radius, a wordmark logo with dark and compact variants, and a footer. It shows every option and doubles as a test that nothing is hard-coded. |
+| `example` | A sample brand ("Example Racquet Club"): different colours, fonts, corner radius, a wordmark logo with dark and compact variants, a footer, and its own terms (ladders, pairs, fixtures, club nights, rests, make-up rounds). It shows every option and doubles as a test that nothing is hard-coded. |
 
 ## Choosing a brand
 
@@ -19,11 +20,12 @@ never flash a default name while a config file loads.
 | Docker | `BRAND=example docker compose up --build` |
 | AWS deploy | Repository variable `BRAND` (see [deployment.md](deployment.md)) |
 
-An unknown brand fails the build: `BRAND="acme": no brands/acme/brand.ts`.
+An unknown or incomplete brand fails the build, e.g.
+`BRAND="acme": brands/acme/ is missing brand.ts, theme.css, terms.json`.
 
 ## Making a brand
 
-Copy `web/brands/default` to `web/brands/<name>` and edit three things.
+Copy `web/brands/default` to `web/brands/<name>` and edit four things.
 
 ### 1. `brand.ts`: name, copy and images
 
@@ -81,6 +83,61 @@ Check text contrast in both modes (`--accent-contrast` on `--accent`,
 Put the logo, icon and any variants in the brand folder and import them in
 `brand.ts`.
 
+### 4. `terms.json`: terminology
+
+The domain words in the UI and in API messages come from a terminology
+table. A brand's `terms.json` lists only the words it changes. Each entry
+can set the singular (`one`), the plural (`other`, which defaults to `one`
+plus "s") and the indefinite article (`article`: "a", "an", or "").
+
+```json
+{
+  "league": { "one": "ladder", "other": "ladders" },
+  "team": { "one": "pair", "other": "pairs" },
+  "match": { "one": "fixture", "other": "fixtures" },
+  "week": { "one": "club night", "other": "club nights" },
+  "bye": { "one": "rest", "other": "rests" },
+  "catchUpRound": { "one": "make-up round", "other": "make-up rounds" }
+}
+```
+
+| Key | Default | Where it appears |
+| --- | --- | --- |
+| `league` | league / leagues | Navigation, league lists, setup, banners |
+| `season` | season | Setup summary ("…in the season") |
+| `week` | week / weeks | Week tabs and picker, "matches per week", headers |
+| `round` | round / rounds | Round cards, "R1" labels (first letter), suggestions |
+| `catchUpRound` | catch-up round | Odd team counts: last round of the week |
+| `bye` | bye | Round cards ("Bye: …"), setup summary |
+| `team` | team / teams | Everywhere teams are listed, counted or validated, and the "Team 4" fallback name |
+| `player` | player / players | Setup, teams page, validation |
+| `match` | match / matches | Fixtures between two teams: live view, schedule, setup |
+| `game` | game / games | Scoring ("games are first to 11", score errors) |
+| `court` | court / courts | Live view, setup, header |
+| `ratingSystem` | DUPR | Rating-system name in hints ("…player's DUPR profile") |
+| `ratingId` | DUPR ID / DUPR IDs | Player ID field, legend |
+| `rating` | rating | Teams page column |
+
+The defaults are in
+[`web/src/lib/default-terms.json`](../web/src/lib/default-terms.json).
+Components use the helpers in [`web/src/lib/terms.ts`](../web/src/lib/terms.ts):
+`term("team", n)` gives "team" or "teams", `Term()` capitalises, `count(3,
+"team")` gives "3 teams", and `a("league")` gives "a league" (or "an event").
+**New UI text must use these helpers rather than hard-coding a domain word.**
+
+**The API uses the same table** (`api/app/terms.py`, same keys and defaults; a
+test keeps the two in sync). That covers the "Team 4" fallback name, setup
+validation ("Pair 2 needs at least one player"), conflict messages ("No free
+courts") and score errors. The API loads the brand's `terms.json` from:
+- docker-compose: the `TERMS_FILE` setting, pointed at the mounted
+  `web/brands/<BRAND>/terms.json` automatically;
+- AWS: the `TERMS_JSON` setting, which Terraform's `brand` variable fills from
+  the same file;
+- local: `TERMS_FILE=../web/brands/<name>/terms.json uvicorn app.main:app`.
+
+Terminology covers domain nouns. General UI words ("Save", "Edit setup",
+"Standings", "Verify") and pickleball's scoring rules aren't terms.
+
 ## API name
 
 The API's docs page title (`/api/docs`) uses `APP_NAME` (default
@@ -90,10 +147,8 @@ The API's docs page title (`/api/docs`) uses `APP_NAME` (default
 
 ## What isn't branded
 
-- **Sport and domain wording** ("league", "court", "DUPR ID", pickleball
-  scoring) is product language, not brand, so it's in the components.
-  Renaming those terms per brand (e.g. "ladder" instead of "league") would
-  need a terminology table in the brand. That's not done yet.
+- **General UI words and scoring rules** (see above).
+- **URLs** (`/leagues`, `/league/teams/…`) stay the same for every brand.
 - **Infrastructure names** (`project` in Terraform, Docker image names) are
   separate from the brand.
 
@@ -101,4 +156,6 @@ The API's docs page title (`/api/docs`) uses `APP_NAME` (default
 
 CI builds the `example` brand on every PR. It checks the page title, and
 fails if the default name ("Pickleball League") appears anywhere in the
-output, which would mean something branded was hard-coded.
+output, which would mean something branded was hard-coded. The API tests
+check that the API's default terms match the web app's, and that a brand's
+terms reach API messages.

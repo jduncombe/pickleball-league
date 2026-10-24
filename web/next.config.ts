@@ -8,8 +8,9 @@ const isDev = process.env.NODE_ENV === "development";
 // code as "@brand/...". See docs/white-labelling.md.
 const brandName = process.env.BRAND || "default";
 const brandDir = path.resolve("brands", brandName);
-if (!existsSync(path.join(brandDir, "brand.ts"))) {
-  throw new Error(`BRAND="${brandName}": no brands/${brandName}/brand.ts`);
+const missing = ["brand.ts", "theme.css", "terms.json"].filter((f) => !existsSync(path.join(brandDir, f)));
+if (missing.length) {
+  throw new Error(`BRAND="${brandName}": brands/${brandName}/ is missing ${missing.join(", ")}`);
 }
 
 const nextConfig: NextConfig = {

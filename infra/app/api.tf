@@ -154,6 +154,8 @@ resource "aws_ecs_task_definition" "api" {
       { name = "DB_NAME", value = aws_db_instance.main.db_name },
       { name = "ROOT_PATH", value = "/api" },
       { name = "APP_NAME", value = var.app_name },
+      # The brand's terminology table (see docs/white-labelling.md).
+      { name = "TERMS_JSON", value = jsonencode(jsondecode(file("${path.module}/../../web/brands/${var.brand}/terms.json"))) },
       # Browsers reach the API same-origin through CloudFront; no CORS needed.
       { name = "CORS_ORIGINS", value = "" },
     ]

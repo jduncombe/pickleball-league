@@ -16,5 +16,5 @@ export const brand: Brand = {
   // The logo is a wordmark, so don't repeat the name beside it.
   showNameInHeader: false,
   icon,
-  footer: { text: "Example Racquet Club · League software", href: "https://example.com" },
+  footer: { text: "Example Racquet Club · Ladder nights", href: "https://example.com" },
 };

@@ -1,8 +1,9 @@
 import type { SetupStep } from "@/lib/routes";
+import { Term, term } from "@/lib/terms";
 
 const STEPS: { step: SetupStep; label: string }[] = [
-  { step: "basics", label: "League basics" },
-  { step: "players", label: "Teams & players" },
+  { step: "basics", label: `${Term("league")} basics` },
+  { step: "players", label: `${Term("team", 2)} & ${term("player", 2)}` },
 ];
 
 export function SetupSteps({ current }: { current: SetupStep }) {

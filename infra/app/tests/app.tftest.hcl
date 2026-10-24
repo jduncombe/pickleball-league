@@ -143,6 +143,21 @@ run "default_configuration" {
   }
 }
 
+run "brand_terms_reach_the_api" {
+  command = apply
+
+  variables {
+    brand = "example"
+  }
+
+  assert {
+    condition = jsondecode(one([
+      for e in jsondecode(aws_ecs_task_definition.api.container_definitions)[0].environment : e.value if e.name == "TERMS_JSON"
+    ])).team.one == "pair"
+    error_message = "The example brand's terminology should be passed to the API."
+  }
+}
+
 run "custom_domain" {
   command = apply
 

@@ -8,6 +8,7 @@ import { SetupSteps } from "@/components/setup/SetupSteps";
 import { type TeamsAction, TeamsForm } from "@/components/setup/TeamsForm";
 import { ErrorBanner, Loading } from "@/components/Status";
 import { api } from "@/lib/api";
+import { Term, term } from "@/lib/terms";
 import { type SetupStep, leagueHref, setupHref } from "@/lib/routes";
 import type { League, TeamSetup } from "@/lib/types";
 import { useLoader } from "@/lib/useLoader";
@@ -25,10 +26,10 @@ function Setup({ league, reload }: { league: League; reload: () => Promise<void>
   if (league.status === "active") {
     return (
       <div className="card empty-state">
-        <h2>This league has been created</h2>
+        <h2>This {term("league")} has been created</h2>
         <p className="muted">
-          Teams and players are fixed for the rest of the league. To change them, edit the setup;
-          play is paused until you save it again.
+          {Term("team", 2)} and {term("player", 2)} are fixed for the rest of the {term("league")}. To change
+          them, edit the setup; play is paused until you save it again.
         </p>
         <div>
           <EditSetupButton league={league} />

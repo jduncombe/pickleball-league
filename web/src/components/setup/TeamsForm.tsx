@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { DUPR_ID_PATTERN, DUPR_ID_TITLE, teamDisplayName } from "@/lib/teams";
+import { Term, term } from "@/lib/terms";
 import type { League, Team, TeamSetup } from "@/lib/types";
 import { ErrorBanner } from "../Status";
 
@@ -88,9 +89,10 @@ export function TeamsForm({
     >
       <p className="muted">
         {league.use_team_names
-          ? "Enter each team's name and players."
-          : "Enter each team's players; teams will be shown by their players' names."}{" "}
-        Players are fixed once the league is created (use <em>Edit setup</em> to change them later).
+          ? `Enter each ${term("team")}'s name and ${term("player", 2)}.`
+          : `Enter each ${term("team")}'s ${term("player", 2)}; ${term("team", 2)} will be shown by their ${term("player", 2)}' names.`}{" "}
+        {Term("player", 2)} are fixed once the {term("league")} is created (use <em>Edit setup</em> to change
+        them later).
       </p>
 
       <div className="grid wide">
@@ -119,7 +121,11 @@ export function TeamsForm({
           {busy === "save" ? "Saving…" : saved ? "Saved" : "Save draft"}
         </button>
         <button type="submit" disabled={busy !== null}>
-          {busy === "create" ? "Creating…" : isRecreate ? "Save & resume league" : "Create the league"}
+          {busy === "create"
+            ? "Creating…"
+            : isRecreate
+              ? `Save & resume ${term("league")}`
+              : `Create the ${term("league")}`}
         </button>
       </div>
     </form>
@@ -143,17 +149,21 @@ function TeamFields({
 
   return (
     <fieldset className="card team-setup">
-      <legend className="sr-only">Team {position}</legend>
+      <legend className="sr-only">
+        {Term("team")} {position}
+      </legend>
       <div className="card-head">
-        <strong>Team {position}</strong>
+        <strong>
+          {Term("team")} {position}
+        </strong>
         <span className="muted" aria-live="polite">
           Shown as: {shownAs}
         </span>
       </div>
       {useTeamNames && (
         <input
-          aria-label={`Team ${position} name`}
-          placeholder="Team name"
+          aria-label={`${Term("team")} ${position} name`}
+          placeholder={`${Term("team")} name`}
           required
           maxLength={120}
           value={team.name}
@@ -166,23 +176,23 @@ function TeamFields({
         return (
           <div key={j} className="player-row">
             <input
-              aria-label={`Team ${position} player ${j + 1} name`}
-              placeholder={`Player ${j + 1}`}
+              aria-label={`${Term("team")} ${position} ${term("player")} ${j + 1} name`}
+              placeholder={`${Term("player")} ${j + 1}`}
               required={required}
               maxLength={120}
               value={p.name}
               onChange={(e) => setPlayer(j, "name", e.target.value)}
             />
             <input
-              aria-label={`Team ${position} player ${j + 1} DUPR ID`}
-              placeholder="DUPR ID"
+              aria-label={`${Term("team")} ${position} ${term("player")} ${j + 1} ${term("ratingId")}`}
+              placeholder={term("ratingId")}
               pattern={DUPR_ID_PATTERN}
               title={DUPR_ID_TITLE}
               value={p.dupr_id}
               onChange={(e) => setPlayer(j, "dupr_id", e.target.value)}
             />
             <input
-              aria-label={`Team ${position} player ${j + 1} email`}
+              aria-label={`${Term("team")} ${position} ${term("player")} ${j + 1} email`}
               type="email"
               placeholder="Email"
               value={p.email}
@@ -191,7 +201,7 @@ function TeamFields({
             <button
               type="button"
               className="link danger"
-              aria-label={`Remove team ${position} player ${j + 1}`}
+              aria-label={`Remove ${term("team")} ${position} ${term("player")} ${j + 1}`}
               disabled={team.players.length <= 1}
               onClick={() => onChange((t) => ({ ...t, players: t.players.filter((_, k) => k !== j) }))}
             >
@@ -206,7 +216,7 @@ function TeamFields({
           className="secondary small"
           onClick={() => onChange((t) => ({ ...t, players: [...t.players, blankPlayer()] }))}
         >
-          + Player
+          + {Term("player")}
         </button>
       </div>
     </fieldset>

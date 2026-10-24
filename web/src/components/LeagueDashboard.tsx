@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { Term, a, term } from "@/lib/terms";
 import { useLoader } from "@/lib/useLoader";
 import type { Match } from "@/lib/types";
 import { Matchup } from "./Matchup";
@@ -64,7 +65,7 @@ export function LeagueDashboard({ leagueId }: { leagueId: number }) {
             ‹
           </button>
           <strong>
-            Week {data.week} of {league.num_weeks}
+            {Term("week")} {data.week} of {league.num_weeks}
           </strong>
           <button
             className="secondary small"
@@ -74,19 +75,21 @@ export function LeagueDashboard({ leagueId }: { leagueId: number }) {
             ›
           </button>
           {isCurrent ? (
-            <span className="badge">current week</span>
+            <span className="badge">current {term("week")}</span>
           ) : (
             <button
               className="secondary small"
               onClick={() => act(() => api.setCurrentWeek(league.id, data.week))}
             >
-              Make current week
+              Make current {term("week")}
             </button>
           )}
         </div>
         <span className="muted">
-          {data.completed_count}/{data.total_count} matches played ·{" "}
-          {free_courts.length ? `Free courts: ${free_courts.join(", ")}` : "All courts in use"}
+          {data.completed_count}/{data.total_count} {term("match", data.total_count)} played ·{" "}
+          {free_courts.length
+            ? `Free ${term("court", free_courts.length)}: ${free_courts.join(", ")}`
+            : `All ${term("court", 2)} in use`}
           {showLegend && (
             <>
               {" · "}
@@ -99,17 +102,21 @@ export function LeagueDashboard({ leagueId }: { leagueId: number }) {
       <ErrorBanner message={actionError ?? error} />
 
       <section>
-        <h2>On court ({in_progress.length})</h2>
+        <h2>
+          On {term("court")} ({in_progress.length})
+        </h2>
         {in_progress.length === 0 ? (
-          <p className="muted">No matches in progress.</p>
+          <p className="muted">No {term("match", 2)} in progress.</p>
         ) : (
           <div className="grid">
             {in_progress.map((m) => (
               <div key={m.id} className="card live">
                 <div className="card-head">
-                  <span className="badge live">Court {m.court}</span>
+                  <span className="badge live">
+                    {Term("court")} {m.court}
+                  </span>
                   <span className="muted">
-                    Week {m.week} · Round {m.round}
+                    {Term("week")} {m.week} · {Term("round")} {m.round}
                   </span>
                 </div>
                 <ScoreForm
@@ -131,7 +138,7 @@ export function LeagueDashboard({ leagueId }: { leagueId: number }) {
       <section>
         <h2>Ready to play ({available.length})</h2>
         {available.length === 0 ? (
-          <p className="muted">No match-ups available right now.</p>
+          <p className="muted">No {term("match", 2)} available right now.</p>
         ) : (
           <MatchList
             matches={available}
@@ -149,11 +156,17 @@ export function LeagueDashboard({ leagueId }: { leagueId: number }) {
 
       {waiting.length > 0 && (
         <section>
-          <h2>Waiting on a team ({waiting.length})</h2>
+          <h2>
+            Waiting on {a("team")} ({waiting.length})
+          </h2>
           <MatchList
             matches={waiting}
             muted
-            action={() => <span className="muted">team on court</span>}
+            action={() => (
+              <span className="muted">
+                {term("team")} on {term("court")}
+              </span>
+            )}
           />
         </section>
       )}
@@ -179,9 +192,12 @@ function MatchList({
         const suggested = m.round === highlightRound;
         return (
           <li key={m.id} className={suggested ? "suggested" : undefined}>
-            <span className="round">R{m.round}</span>
+            <span className="round" title={`${Term("round")} ${m.round}`}>
+              {Term("round").charAt(0)}
+              {m.round}
+            </span>
             <Matchup match={m} showDupr />
-            {suggested && <span className="badge suggested">Earliest round</span>}
+            {suggested && <span className="badge suggested">Earliest {term("round")}</span>}
             <span className="action">{action(m)}</span>
           </li>
         );
@@ -203,18 +219,18 @@ function StartButton({
   const selected = court === "" ? freeCourts[0] : court;
 
   if (freeCourts.length === 0) {
-    return <span className="muted">no free court</span>;
+    return <span className="muted">no free {term("court")}</span>;
   }
   return (
     <span className="start">
       <select
-        aria-label={`Court for match ${match.id}`}
+        aria-label={`${Term("court")} for ${term("match")} ${match.id}`}
         value={selected}
         onChange={(e) => setCourt(Number(e.target.value))}
       >
         {freeCourts.map((c) => (
           <option key={c} value={c}>
-            Court {c}
+            {Term("court")} {c}
           </option>
         ))}
       </select>

@@ -1,0 +1,16 @@
+{
+  "league": { "one": "league", "other": "leagues", "article": "a" },
+  "season": { "one": "season", "other": "seasons", "article": "a" },
+  "week": { "one": "week", "other": "weeks", "article": "a" },
+  "round": { "one": "round", "other": "rounds", "article": "a" },
+  "catchUpRound": { "one": "catch-up round", "other": "catch-up rounds", "article": "a" },
+  "bye": { "one": "bye", "other": "byes", "article": "a" },
+  "team": { "one": "team", "other": "teams", "article": "a" },
+  "player": { "one": "player", "other": "players", "article": "a" },
+  "match": { "one": "match", "other": "matches", "article": "a" },
+  "game": { "one": "game", "other": "games", "article": "a" },
+  "court": { "one": "court", "other": "courts", "article": "a" },
+  "ratingSystem": { "one": "DUPR", "other": "DUPR", "article": "" },
+  "ratingId": { "one": "DUPR ID", "other": "DUPR IDs", "article": "a" },
+  "rating": { "one": "rating", "other": "ratings", "article": "a" }
+}

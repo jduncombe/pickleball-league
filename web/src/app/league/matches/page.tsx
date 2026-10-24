@@ -6,6 +6,7 @@ import { Matchup } from "@/components/Matchup";
 import { ScoreForm } from "@/components/ScoreForm";
 import { ErrorBanner, Loading } from "@/components/Status";
 import { api } from "@/lib/api";
+import { Term, a, term } from "@/lib/terms";
 import { useLoader } from "@/lib/useLoader";
 import type { League, Match, TeamRef } from "@/lib/types";
 
@@ -52,7 +53,7 @@ function WeekSchedule({ league, onResult }: { league: League; onResult: () => vo
             className={w === week ? "active" : ""}
             onClick={() => setWeek(w)}
           >
-            Week {w}
+            {Term("week")} {w}
           </button>
         ))}
       </nav>
@@ -99,14 +100,16 @@ function RoundCard({
     <div className="card">
       <div className="card-head">
         <h3>
-          Round {round} {catchUp && <span className="badge">Catch-up round</span>}
+          {Term("round")} {round} {catchUp && <span className="badge">{Term("catchUpRound")}</span>}
         </h3>
         {catchUp ? (
-          <p className="byes muted">Teams that had a bye this week play each other</p>
+          <p className="byes muted">
+            {Term("team", 2)} that had {a("bye")} this {term("week")} play each other
+          </p>
         ) : (
           byes.length > 0 && (
             <p className="byes muted">
-              Bye: <strong>{byes.map((t) => t.display_name).join(", ")}</strong>
+              {Term("bye")}: <strong>{byes.map((t) => t.display_name).join(", ")}</strong>
             </p>
           )
         )}
@@ -115,7 +118,7 @@ function RoundCard({
         {matches.map((m) => (
           <li key={m.id}>
             <span className={`badge ${m.verified_at ? "verified" : m.status}`}>
-              {m.verified_at ? "✓ verified" : m.status === "in_progress" ? `Court ${m.court}` : m.status}
+              {m.verified_at ? "✓ verified" : m.status === "in_progress" ? `${Term("court")} ${m.court}` : m.status}
             </span>
             <Matchup match={m} />
             <span className="action">
@@ -177,7 +180,7 @@ function Standings({ leagueId, version }: { leagueId: number; version: number })
         <table className="compact">
           <thead>
             <tr>
-              <th>Team</th>
+              <th>{Term("team")}</th>
               <th>P</th>
               <th>W</th>
               <th>L</th>

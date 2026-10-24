@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { BasicsForm, DEFAULT_BASICS } from "@/components/setup/BasicsForm";
 import { SetupSteps } from "@/components/setup/SetupSteps";
 import { api } from "@/lib/api";
+import { term } from "@/lib/terms";
 import { setupHref } from "@/lib/routes";
 
 /** Setup step 1 for a new league; step 2 is /league/setup/?step=players. */
@@ -11,7 +12,7 @@ export default function NewLeaguePage() {
   const router = useRouter();
   return (
     <div className="stack setup">
-      <h1>New league</h1>
+      <h1>New {term("league")}</h1>
       <SetupSteps current="basics" />
       <BasicsForm
         initial={DEFAULT_BASICS}

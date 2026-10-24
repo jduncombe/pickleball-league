@@ -3,6 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { api } from "@/lib/api";
+import { term } from "@/lib/terms";
 import { useLoader } from "@/lib/useLoader";
 import type { League } from "@/lib/types";
 import { LeagueNav } from "./LeagueNav";
@@ -32,7 +33,7 @@ export function LeagueShell(props: Props) {
 function LeagueShellInner({ children, allowSetup = false }: Props) {
   const leagueId = Number(useSearchParams().get("id"));
   const { data: league, error, reload } = useLoader(
-    () => (leagueId ? api.getLeague(leagueId) : Promise.reject(new Error("No league selected"))),
+    () => (leagueId ? api.getLeague(leagueId) : Promise.reject(new Error(`No ${term("league")} selected`))),
     [leagueId],
   );
 

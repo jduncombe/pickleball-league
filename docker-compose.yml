@@ -5,8 +5,11 @@ services:
       DATABASE_URL: sqlite:////data/pickleball.db
       ROOT_PATH: /api
       APP_NAME: ${APP_NAME:-Pickleball League}
+      # The brand's terminology table, so API messages use the same words as the UI.
+      TERMS_FILE: /brands/${BRAND:-default}/terms.json
     volumes:
       - api-data:/data
+      - ./web/brands:/brands:ro
     ports:
       - "8000:8000"
     healthcheck:

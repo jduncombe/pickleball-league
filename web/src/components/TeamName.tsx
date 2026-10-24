@@ -1,6 +1,7 @@
+import { term } from "@/lib/terms";
 import type { TeamRef } from "@/lib/types";
 
-export const DUPR_READY_TITLE = "All players have DUPR IDs";
+export const DUPR_READY_TITLE = `All ${term("player", 2)} have ${term("ratingId", 2)}`;
 
 /**
  * A team's display name. With `showDupr`, teams whose players all have DUPR

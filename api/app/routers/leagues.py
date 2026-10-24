@@ -4,6 +4,7 @@ from sqlalchemy import select
 from .. import schemas
 from ..deps import DB, get_or_404
 from ..models import League, Match, MatchStatus
+from ..terms import term
 
 router = APIRouter(prefix="/leagues", tags=["leagues"])
 
@@ -23,7 +24,7 @@ def update_league(league_id: int, payload: schemas.LeagueUpdate, db: DB):
     league = get_or_404(db, League, league_id)
     changes = payload.model_dump(exclude_unset=True)
     if "current_week" in changes and changes["current_week"] > league.num_weeks:
-        raise HTTPException(422, f"current_week must be between 1 and {league.num_weeks}")
+        raise HTTPException(422, f"Current {term('week')} must be between 1 and {league.num_weeks}")
     for field, value in changes.items():
         setattr(league, field, value)
     db.commit()

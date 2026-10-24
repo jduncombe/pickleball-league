@@ -5,9 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { api } from "@/lib/api";
 import { type LeaguePath, leagueHref, setupHref } from "@/lib/routes";
+import { Term, count, term } from "@/lib/terms";
 import type { League } from "@/lib/types";
-
-const plural = (n: number, word: string, many = `${word}s`) => `${n} ${n === 1 ? word : many}`;
 
 export function LeagueNav({ league }: { league: League }) {
   const pathname = usePathname();
@@ -15,7 +14,7 @@ export function LeagueNav({ league }: { league: League }) {
   const inSetup = league.status === "setup";
   const tabs: { path: LeaguePath; label: string; alsoActiveOn?: string }[] = [
     { path: "/league", label: "Live", alsoActiveOn: "/" },
-    { path: "/league/teams", label: "Teams & players" },
+    { path: "/league/teams", label: `${Term("team", 2)} & ${term("player", 2)}` },
     { path: "/league/matches", label: "Schedule & results" },
   ];
   if (inSetup) tabs.push({ path: "/league/setup", label: "Setup" });
@@ -27,9 +26,9 @@ export function LeagueNav({ league }: { league: League }) {
           {league.name} {inSetup && <span className="badge">in setup</span>}
         </h1>
         <p className="muted">
-          {league.num_teams} teams · {plural(league.num_weeks, "week")} ·{" "}
-          {plural(league.matches_per_week, "match", "matches")}/week · {plural(league.num_courts, "court")} ·
-          games to {league.points_to_win}
+          {count(league.num_teams, "team")} · {count(league.num_weeks, "week")} ·{" "}
+          {count(league.matches_per_week, "match")}/{term("week")} · {count(league.num_courts, "court")} ·{" "}
+          {term("game", 2)} to {league.points_to_win}
         </p>
       </div>
       <div className="league-nav-actions">
@@ -56,11 +55,12 @@ export function EditSetupButton({ league }: { league: League }) {
   const [busy, setBusy] = useState(false);
 
   async function edit() {
+    const shape = `the number of ${term("team", 2)}, ${term("week", 2)} or ${term("match", 2)} per ${term("week")}`;
     const ok = window.confirm(
-      "Edit the league setup?\n\nPlay is paused until you finish editing. " +
+      `Edit the ${term("league")} setup?\n\nPlay is paused until you finish editing. ` +
         (league.has_played_matches
-          ? "Matches have been played, so names, players and courts can change, but not the number of teams, weeks or rounds."
-          : "Changing the number of teams, weeks or rounds rebuilds the schedule."),
+          ? `${Term("match", 2)} have been played, so names, ${term("player", 2)} and ${term("court", 2)} can change, but not ${shape} or the points to win.`
+          : `Changing ${shape} rebuilds the schedule.`),
     );
     if (!ok) return;
     setBusy(true);

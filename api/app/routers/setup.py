@@ -16,6 +16,7 @@ from .. import schemas
 from ..deps import DB, get_or_404
 from ..models import League, LeagueStatus, Match, MatchStatus, Player, Team
 from ..scheduling import build_schedule, summarize
+from ..terms import Term, count, term
 
 router = APIRouter(prefix="/leagues", tags=["league setup"])
 preview_router = APIRouter(tags=["league setup"])
@@ -27,9 +28,19 @@ SCHEDULE_FIELDS = ("num_teams", "num_weeks", "matches_per_week")
 LOCKED_AFTER_PLAY = (*SCHEDULE_FIELDS, "points_to_win")
 
 
+def _field_label(field: str) -> str:
+    """Human wording for a setup field, in the brand's terms."""
+    return {
+        "num_teams": f"number of {term('team', 2)}",
+        "num_weeks": f"number of {term('week', 2)}",
+        "matches_per_week": f"{term('match', 2)} per {term('week')}",
+        "points_to_win": "points to win",
+    }.get(field, field)
+
+
 def _require_setup(league: League) -> None:
     if league.status != LeagueStatus.SETUP:
-        raise HTTPException(409, "League setup is finalised; use 'Edit setup' to change it")
+        raise HTTPException(409, f"{Term('league')} setup is finalised; use 'Edit setup' to change it")
 
 
 def _resize_teams(league: League) -> None:
@@ -57,7 +68,10 @@ def schedule_preview(
 ):
     """Shape of the schedule these setup basics would produce, for the setup summary."""
     if matches_per_week > num_teams - 1:
-        raise HTTPException(422, f"At most {num_teams - 1} matches per week with {num_teams} teams")
+        raise HTTPException(
+            422,
+            f"At most {count(num_teams - 1, 'match')} per {term('week')} with {count(num_teams, 'team')}",
+        )
     teams = list(range(1, num_teams + 1))
     summary = summarize(build_schedule(teams, num_weeks, matches_per_week), teams, num_weeks, matches_per_week)
     return schemas.SchedulePreview(
@@ -90,7 +104,9 @@ def update_basics(league_id: int, payload: schemas.LeagueBasics, db: DB):
         locked = [f for f in LOCKED_AFTER_PLAY if getattr(payload, f) != getattr(league, f)]
         if locked:
             raise HTTPException(
-                409, "Matches have been played, so these can't change: " + ", ".join(locked)
+                409,
+                f"{Term('match', 2)} have been played, so these can't change: "
+                + ", ".join(_field_label(f) for f in locked),
             )
     if any(getattr(payload, f) != getattr(league, f) for f in SCHEDULE_FIELDS):
         # The schedule no longer fits; it is rebuilt when the league is created.
@@ -115,7 +131,9 @@ def update_teams(league_id: int, payload: schemas.TeamsSetup, db: DB):
     league = get_or_404(db, League, league_id)
     _require_setup(league)
     if len(payload.teams) != league.num_teams:
-        raise HTTPException(422, f"Expected {league.num_teams} teams, got {len(payload.teams)}")
+        raise HTTPException(
+            422, f"Expected {count(league.num_teams, 'team')}, got {len(payload.teams)}"
+        )
 
     for team, setup in zip(league.teams, payload.teams, strict=True):
         team.name = setup.name
@@ -134,9 +152,9 @@ def create_the_league(league_id: int, db: DB):
     problems = []
     for team in league.teams:
         if league.use_team_names and not team.name:
-            problems.append(f"Team {team.position} needs a name")
+            problems.append(f"{Term('team')} {team.position} needs a name")
         if not team.players:
-            problems.append(f"Team {team.position} needs at least one player")
+            problems.append(f"{Term('team')} {team.position} needs at least one {term('player')}")
     if problems:
         raise HTTPException(422, "; ".join(problems))
 
@@ -157,7 +175,10 @@ def edit_setup(league_id: int, db: DB):
     if league.status == LeagueStatus.SETUP:
         return league
     if any(m.status == MatchStatus.IN_PROGRESS for m in league.matches):
-        raise HTTPException(409, "Finish the matches on court (or return them to the schedule) first")
+        raise HTTPException(
+            409,
+            f"Finish the {term('match', 2)} on {term('court')} (or return them to the schedule) first",
+        )
     league.status = LeagueStatus.SETUP
     db.commit()
     return league

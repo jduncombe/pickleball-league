@@ -2,20 +2,51 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { Term, a, count, term } from "@/lib/terms";
 import { type LeagueBasics, POINTS_OPTIONS, type PointsToWin, type SchedulePreview } from "@/lib/types";
 import { ErrorBanner } from "../Status";
 
 type NumberField = "num_teams" | "num_weeks" | "matches_per_week" | "num_courts";
 
 const FIELDS: { key: NumberField; label: string; min: number; max: number; help: string; schedule: boolean }[] = [
-  { key: "num_teams", label: "Number of teams", min: 2, max: 64, help: "Players are entered on the next step.", schedule: true },
-  { key: "num_weeks", label: "Number of weeks", min: 1, max: 52, help: "Length of the season.", schedule: true },
+  {
+    key: "num_teams",
+    label: `Number of ${term("team", 2)}`,
+    min: 2,
+    max: 64,
+    help: `${Term("player", 2)} are entered on the next step.`,
+    schedule: true,
+  },
+  {
+    key: "num_weeks",
+    label: `Number of ${term("week", 2)}`,
+    min: 1,
+    max: 52,
+    help: `Length of the ${term("season")}.`,
+    schedule: true,
+  },
   // max is also capped at num_teams - 1 (one match against each other team).
-  { key: "matches_per_week", label: "Matches per week", min: 1, max: 20, help: "How many matches each team plays each week.", schedule: true },
-  { key: "num_courts", label: "Courts in use", min: 1, max: 50, help: "Limits how many matches run at once.", schedule: false },
+  {
+    key: "matches_per_week",
+    label: `${Term("match", 2)} per ${term("week")}`,
+    min: 1,
+    max: 20,
+    help: `How many ${term("match", 2)} each ${term("team")} plays each ${term("week")}.`,
+    schedule: true,
+  },
+  {
+    key: "num_courts",
+    label: `${Term("court", 2)} in use`,
+    min: 1,
+    max: 50,
+    help: `Limits how many ${term("match", 2)} run at once.`,
+    schedule: false,
+  },
 ];
 
-const plural = (n: number, word: string, many = `${word}s`) => `${n} ${n === 1 ? word : many}`;
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+const FIXED = `Fixed: ${term("match", 2)} have been played.`;
 
 /** The schedule these settings would produce, from the API (debounced). */
 function useSchedulePreview(form: LeagueBasics): SchedulePreview | null {
@@ -90,7 +121,7 @@ export function BasicsForm({
       <ErrorBanner message={error} />
 
       <label className="field">
-        <span>League name</span>
+        <span>{Term("league")} name</span>
         <input
           required
           maxLength={120}
@@ -117,9 +148,9 @@ export function BasicsForm({
               />
               <small className={f.key === "matches_per_week" && tooManyMatches ? "error" : "muted"}>
                 {locked
-                  ? "Fixed: matches have been played."
+                  ? FIXED
                   : f.key === "matches_per_week" && tooManyMatches
-                    ? `At most ${plural(maxMatches, "match", "matches")} with ${form.num_teams} teams (one against each other team).`
+                    ? `At most ${count(maxMatches, "match")} with ${count(form.num_teams, "team")} (one against each other ${term("team")}).`
                     : f.help}
               </small>
             </label>
@@ -141,9 +172,7 @@ export function BasicsForm({
           ))}
         </select>
         <small className="muted">
-          {lockedAfterPlay
-            ? "Fixed: matches have been played."
-            : `Games are first to ${n}, win by 2 (e.g. ${exampleScores}).`}
+          {lockedAfterPlay ? FIXED : `${Term("game", 2)} are first to ${n}, win by 2 (e.g. ${exampleScores}).`}
         </small>
       </label>
 
@@ -154,43 +183,39 @@ export function BasicsForm({
           onChange={(e) => setForm({ ...form, use_team_names: e.target.checked })}
         />
         <span>
-          <strong>Use team names</strong>
+          <strong>Use {term("team")} names</strong>
           <small className="muted">
             {form.use_team_names
-              ? "Each team gets a name, entered with its players."
-              : "Teams are shown by their players' names, e.g. “Alex & Sam”."}
+              ? `Each ${term("team")} gets a name, entered with its ${term("player", 2)}.`
+              : `${Term("team", 2)} are shown by their ${term("player", 2)}' names, e.g. “Alex & Sam”.`}
           </small>
         </span>
       </label>
 
       <div className="card summary" aria-live="polite">
         <p>
-          Each team plays {plural(form.matches_per_week, "match", "matches")} a week
-          {preview && (
-            <>
-              {" "}
-              over {plural(preview.rounds_per_week, "round")} ({plural(preview.games_per_week, "game")} a week,{" "}
-              {plural(preview.games_per_week * form.num_weeks, "game")} in the season)
-            </>
-          )}
-          . Up to {plural(gamesPerRound, "game")} per round, played in {plural(wavesPerRound, "wave")} on{" "}
-          {plural(form.num_courts, "court")}.
+          Each {term("team")} plays {count(form.matches_per_week, "match")} a {term("week")}
+          {preview &&
+            ` over ${count(preview.rounds_per_week, "round")} (${count(preview.games_per_week, "match")} per ${term("week")} in total, ${preview.games_per_week * form.num_weeks} in the ${term("season")})`}
+          . Up to {count(gamesPerRound, "match")} per {term("round")}, played in {plural(wavesPerRound, "wave")} on{" "}
+          {count(form.num_courts, "court")}.
         </p>
         {preview?.has_catch_up_round && (
           <p>
-            With an odd number of teams, one team sits out each round; the last round of the week is a
-            catch-up round where those teams play each other.
+            With an odd number of {term("team", 2)}, one {term("team")} has {a("bye")} in each {term("round")}; the
+            last {term("round")} of the {term("week")} is {a("catchUpRound")} where those {term("team", 2)} play each
+            other.
           </p>
         )}
         {preview?.teams_short_per_week ? (
           <p>
-            {form.num_teams} teams × {form.matches_per_week} matches is odd, so each week one team plays a
-            match fewer (rotating between teams).
+            {count(form.num_teams, "team")} × {count(form.matches_per_week, "match")} is odd, so each{" "}
+            {term("week")} one {term("team")} plays one {term("match")} fewer (rotating between {term("team", 2)}).
           </p>
         ) : null}
         {preview && form.num_teams > 2 && (
           <p>
-            Over the season each pair of teams meets{" "}
+            Over the {term("season")}, any two {term("team", 2)} meet{" "}
             {preview.min_meetings === preview.max_meetings
               ? plural(preview.min_meetings, "time")
               : `${preview.min_meetings}–${preview.max_meetings} times`}
@@ -198,13 +223,13 @@ export function BasicsForm({
           </p>
         )}
         <p>
-          Games are first to {form.points_to_win}, win by 2 (e.g. {exampleScores}); no ties.
+          {Term("game", 2)} are first to {form.points_to_win}, win by 2 (e.g. {exampleScores}); no ties.
         </p>
       </div>
 
       <div>
         <button type="submit" disabled={saving || tooManyMatches}>
-          {saving ? "Saving…" : "Next: teams & players →"}
+          {saving ? "Saving…" : `Next: ${term("team", 2)} & ${term("player", 2)} →`}
         </button>
       </div>
     </form>

@@ -1,0 +1,8 @@
+{
+  "league": { "one": "ladder", "other": "ladders" },
+  "team": { "one": "pair", "other": "pairs" },
+  "match": { "one": "fixture", "other": "fixtures" },
+  "bye": { "one": "rest", "other": "rests" },
+  "catchUpRound": { "one": "make-up round", "other": "make-up rounds" },
+  "week": { "one": "club night", "other": "club nights" }
+}

@@ -1,6 +1,7 @@
 import type { StaticImageData } from "next/image";
 import Link from "next/link";
 import { brand } from "@brand/brand";
+import { Term, term } from "@/lib/terms";
 
 function Logo({
   image,
@@ -39,9 +40,9 @@ export function Nav() {
       </Link>
       <nav>
         <Link href="/">Dashboard</Link>
-        <Link href="/leagues">Leagues</Link>
+        <Link href="/leagues">{Term("league", 2)}</Link>
         <Link href="/leagues/new" className="button small">
-          New league
+          New {term("league")}
         </Link>
       </nav>
     </header>

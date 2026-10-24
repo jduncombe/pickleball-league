@@ -9,6 +9,8 @@ Mirrored for instant feedback in web/src/lib/scoring.ts; keep them in sync.
 
 from dataclasses import dataclass
 
+from .terms import a, term
+
 
 @dataclass(frozen=True)
 class ScoreProblem:
@@ -44,13 +46,13 @@ def check_score(score_a: int, score_b: int, points_to_win: int) -> ScoreProblem 
         )
     if high - low < 2:
         return ScoreProblem(
-            f"{entered} isn't finished: a game must be won by 2, so play continues "
+            f"{entered} isn't finished: {a('game')} must be won by 2, so play continues "
             f"(e.g. {_example_win(n, low)})",
             (loser,),
         )
     if high > n and high - low > 2:
         return ScoreProblem(
-            f"{entered} isn't possible: the game ends as soon as one side has {n}+ points and "
+            f"{entered} isn't possible: the {term('game')} ends as soon as one side has {n}+ points and "
             f"leads by 2 (e.g. {_example_win(n, low)})",
             (winner,),
         )

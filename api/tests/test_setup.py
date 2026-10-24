@@ -122,7 +122,7 @@ def test_edit_setup_pauses_play_and_keeps_schedule(client, league):
     # ...but not the shape of the season, once matches are played.
     resp = client.put(f"/leagues/{lid}/setup", json={**BASICS, "num_teams": 6})
     assert resp.status_code == 409
-    assert "num_teams" in resp.text
+    assert "can't change: number of teams" in resp.json()["detail"]
 
     recreated = client.post(f"/leagues/{lid}/finalize").json()
     assert recreated["status"] == "active"
@@ -191,7 +191,7 @@ def test_points_to_win_options_and_lock_after_play(client):
     # ...but not once results exist under the current rules.
     resp = client.put(f"/leagues/{lid}/setup", json={**BASICS, "points_to_win": 11})
     assert resp.status_code == 409
-    assert "points_to_win" in resp.text
+    assert "can't change: points to win" in resp.json()["detail"]
 
 
 def test_matches_per_week_limited_by_opponents(client):
