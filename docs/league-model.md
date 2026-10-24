@@ -70,6 +70,10 @@ restores them.
 Example: 8 teams, 3 rounds/week, 8 weeks → 24 slots, cycle of 7 rounds, 4
 matches per round, 96 matches total; each pairing is played 3–4 times.
 
+With an odd number of teams, a different team sits out each round. The
+Schedule & results screen shows it on the round card ("Bye: …"). Byes aren't
+stored; a round's bye is simply whichever team has no match in it.
+
 The schedule is built when the league is created. It is rebuilt only if
 setup is edited to change the number of teams, weeks or rounds, which is
 possible only before any match has been played (see [Setup](#setup)).
@@ -93,7 +97,16 @@ the lowest free court is used.
 
 Note that "ready to play" matches can overlap — e.g. *A vs B* (round 2) and
 *A vs C* (round 3) can both be listed while A is idle. Once one starts, the
-other moves to "waiting". Organisers generally start the earliest round first.
+other moves to "waiting".
+
+To keep the week on track, the live view **highlights the ready-to-play
+matches from the earliest round** that still has one ("Earliest round"). Those
+are the suggested next games.
+
+Teams whose players **all** have DUPR IDs are shown in a different colour on
+the live view (court cards, ready to play, waiting), with a legend. A match
+between two such teams is one that could be submitted to DUPR. The API
+exposes this as `dupr_ready` on each team.
 
 Matches from a week other than the selected week can still be on court (e.g.
 make-up games); they appear under "On court" and block their teams.
@@ -103,5 +116,20 @@ make-up games); they appear under "On court" and block their teams.
 - A result can be entered for a match in any status: from the court card when
   it finishes, or later from the Schedule & results screen (e.g. paper score
   sheets). Entering a result frees the court.
-- Ties are rejected (pickleball games are played to a win).
+- **Scoring rules.** Each league sets **points to win** at setup: 11, 15 or 21
+  (default 11). A game is first to that many points and must be **won by 2**;
+  there are no ties. If the score reaches one below the target each (14-14
+  in a game to 15), play continues until one side leads by 2. So, for games
+  to 15:
+  - valid: 15-13, 15-0, 16-14, 22-20;
+  - invalid: 15-14 (not won by 2, play continues), 16-13 (the game would
+    have ended at 15-13), 14-12 (nobody reached 15), and any tie.
+
+  Scores are checked as they're saved, in the browser and again by the API
+  (`api/app/scoring.py`, mirrored in `web/src/lib/scoring.ts`). The box that
+  is most likely wrong is highlighted, with a message suggesting a valid
+  score. Points to win can't change once a match has been played.
+- **Verifying results.** On Schedule & results, a completed match has a
+  **Verify** button. A verified result is locked: it shows "verified" with a
+  lock, and the API refuses any change to it. There is no un-verify.
 - Standings order: wins, then point differential, then points scored.

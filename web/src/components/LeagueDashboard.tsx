@@ -6,6 +6,7 @@ import { useLoader } from "@/lib/useLoader";
 import type { Match } from "@/lib/types";
 import { Matchup } from "./Matchup";
 import { ScoreForm } from "./ScoreForm";
+import { DuprLegend } from "./TeamName";
 import { ErrorBanner, Loading } from "./Status";
 
 const REFRESH_MS = 15_000;
@@ -44,6 +45,11 @@ export function LeagueDashboard({ leagueId }: { leagueId: number }) {
   if (!data) return <ErrorBanner message={error} />;
 
   const { league, free_courts, in_progress, available, waiting } = data;
+  // Suggest the earliest round that still has a playable match.
+  const earliestRound = available.length ? Math.min(...available.map((m) => m.round)) : undefined;
+  const showLegend = [...in_progress, ...available, ...waiting].some(
+    (m) => m.team_a.dupr_ready || m.team_b.dupr_ready,
+  );
   const isCurrent = data.week === league.current_week;
 
   return (
@@ -81,6 +87,12 @@ export function LeagueDashboard({ leagueId }: { leagueId: number }) {
         <span className="muted">
           {data.completed_count}/{data.total_count} matches played ·{" "}
           {free_courts.length ? `Free courts: ${free_courts.join(", ")}` : "All courts in use"}
+          {showLegend && (
+            <>
+              {" · "}
+              <DuprLegend />
+            </>
+          )}
         </span>
       </div>
 
@@ -100,8 +112,13 @@ export function LeagueDashboard({ leagueId }: { leagueId: number }) {
                     Week {m.week} · Round {m.round}
                   </span>
                 </div>
-                <Matchup match={m} />
-                <ScoreForm match={m} onSaved={reload} />
+                <ScoreForm
+                  match={m}
+                  pointsToWin={league.points_to_win}
+                  onSaved={reload}
+                  layout="board"
+                  showDupr
+                />
                 <button className="link" onClick={() => act(() => api.cancelMatch(m.id))}>
                   Return to schedule
                 </button>
@@ -118,6 +135,7 @@ export function LeagueDashboard({ leagueId }: { leagueId: number }) {
         ) : (
           <MatchList
             matches={available}
+            highlightRound={earliestRound}
             action={(m) => (
               <StartButton
                 match={m}
@@ -147,20 +165,27 @@ function MatchList({
   matches,
   action,
   muted,
+  highlightRound,
 }: {
   matches: Match[];
   action: (m: Match) => React.ReactNode;
   muted?: boolean;
+  /** Matches from this round are marked as the suggested next games. */
+  highlightRound?: number;
 }) {
   return (
     <ul className={`match-list ${muted ? "muted" : ""}`}>
-      {matches.map((m) => (
-        <li key={m.id}>
-          <span className="round">R{m.round}</span>
-          <Matchup match={m} />
-          <span className="action">{action(m)}</span>
-        </li>
-      ))}
+      {matches.map((m) => {
+        const suggested = m.round === highlightRound;
+        return (
+          <li key={m.id} className={suggested ? "suggested" : undefined}>
+            <span className="round">R{m.round}</span>
+            <Matchup match={m} showDupr />
+            {suggested && <span className="badge suggested">Earliest round</span>}
+            <span className="action">{action(m)}</span>
+          </li>
+        );
+      })}
     </ul>
   );
 }

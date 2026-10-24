@@ -5,6 +5,9 @@ export type MatchStatus = "scheduled" | "in_progress" | "completed";
 /** "setup": basics/teams/players being entered or edited. "active": created, playable. */
 export type LeagueStatus = "setup" | "active";
 
+export const POINTS_OPTIONS = [11, 15, 21] as const;
+export type PointsToWin = (typeof POINTS_OPTIONS)[number];
+
 /** Setup step 1. */
 export interface LeagueBasics {
   name: string;
@@ -12,6 +15,8 @@ export interface LeagueBasics {
   num_weeks: number;
   rounds_per_week: number;
   num_courts: number;
+  /** Games are first to this many points, win by 2. */
+  points_to_win: PointsToWin;
   /** When false, teams are shown by their players' names. */
   use_team_names: boolean;
 }
@@ -21,7 +26,7 @@ export interface League extends LeagueBasics {
   status: LeagueStatus;
   /** When the league was first created (setup finalised); null until then. */
   created_league_at: string | null;
-  /** Once true, num_teams / num_weeks / rounds_per_week can't change. */
+  /** Once true, num_teams / num_weeks / rounds_per_week / points_to_win can't change. */
   has_played_matches: boolean;
   current_week: number;
   created_at: string;
@@ -53,6 +58,8 @@ export interface TeamRef {
   name: string | null;
   /** name (if the league uses team names), else the players' names ("Alex & Sam"), else "Team N". */
   display_name: string;
+  /** Every player on the team has a DUPR ID. */
+  dupr_ready: boolean;
 }
 
 export interface Team extends TeamRef {
@@ -74,6 +81,8 @@ export interface Match {
   score_b: number | null;
   started_at: string | null;
   completed_at: string | null;
+  /** Set once the result is verified; the score is then locked. */
+  verified_at: string | null;
 }
 
 export interface Dashboard {

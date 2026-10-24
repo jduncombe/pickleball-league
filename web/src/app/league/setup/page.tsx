@@ -45,7 +45,7 @@ function Setup({ league, reload }: { league: League; reload: () => Promise<void>
           // Remount with fresh values if the league changes underneath.
           key={league.id}
           initial={league}
-          scheduleLocked={league.has_played_matches}
+          lockedAfterPlay={league.has_played_matches}
           onSubmit={async (basics) => {
             await api.updateBasics(league.id, basics);
             await reload();

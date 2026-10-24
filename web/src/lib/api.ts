@@ -13,10 +13,14 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
+    /** Request fields a validation error points at (e.g. "score_b"). */
+    public fields: string[] = [],
   ) {
     super(message);
   }
 }
+
+type ValidationError = { loc?: (string | number)[]; msg: string };
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
@@ -26,18 +30,20 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     let message = res.statusText;
+    let fields: string[] = [];
     try {
       const body = await res.json();
-      message =
-        typeof body.detail === "string"
-          ? body.detail
-          : Array.isArray(body.detail)
-            ? body.detail.map((d: { msg: string }) => d.msg).join("; ")
-            : message;
+      if (typeof body.detail === "string") {
+        message = body.detail;
+      } else if (Array.isArray(body.detail)) {
+        const errors = body.detail as ValidationError[];
+        message = [...new Set(errors.map((d) => d.msg))].join("; ");
+        fields = errors.map((d) => String(d.loc?.at(-1) ?? ""));
+      }
     } catch {
       // non-JSON error body; keep statusText
     }
-    throw new ApiError(res.status, message);
+    throw new ApiError(res.status, message, fields);
   }
   return res.status === 204 ? (undefined as T) : res.json();
 }
@@ -74,6 +80,8 @@ export const api = {
     request<Match>(`/matches/${matchId}/start`, { method: "POST", body: json({ court }) }),
   cancelMatch: (matchId: number) =>
     request<Match>(`/matches/${matchId}/cancel`, { method: "POST" }),
+  /** Lock a completed match's result; it can't be changed afterwards. */
+  verifyMatch: (matchId: number) => request<Match>(`/matches/${matchId}/verify`, { method: "POST" }),
   recordResult: (matchId: number, score_a: number, score_b: number) =>
     request<Match>(`/matches/${matchId}/result`, {
       method: "PUT",

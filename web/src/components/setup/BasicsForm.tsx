@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { LeagueBasics } from "@/lib/types";
+import { type LeagueBasics, POINTS_OPTIONS, type PointsToWin } from "@/lib/types";
 import { ErrorBanner } from "../Status";
 
 type NumberField = "num_teams" | "num_weeks" | "rounds_per_week" | "num_courts";
@@ -19,17 +19,21 @@ export const DEFAULT_BASICS: LeagueBasics = {
   num_weeks: 8,
   rounds_per_week: 3,
   num_courts: 4,
+  points_to_win: 11,
   use_team_names: false,
 };
 
-/** Setup step 1. `scheduleLocked`: matches have been played, so the season's shape is fixed. */
+/**
+ * Setup step 1. `lockedAfterPlay`: matches have been played, so the season's
+ * shape and the points to win are fixed.
+ */
 export function BasicsForm({
   initial,
-  scheduleLocked = false,
+  lockedAfterPlay = false,
   onSubmit,
 }: {
   initial: LeagueBasics;
-  scheduleLocked?: boolean;
+  lockedAfterPlay?: boolean;
   onSubmit: (basics: LeagueBasics) => Promise<void>;
 }) {
   const [form, setForm] = useState<LeagueBasics>(initial);
@@ -39,6 +43,8 @@ export function BasicsForm({
   const matchesPerRound = Math.floor(form.num_teams / 2);
   const wavesPerRound = Math.ceil(matchesPerRound / Math.max(form.num_courts, 1));
   const totalMatches = matchesPerRound * form.rounds_per_week * form.num_weeks;
+  const n = form.points_to_win;
+  const exampleScores = `${n}-${n - 2} or ${n + 1}-${n - 1}`;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -68,7 +74,7 @@ export function BasicsForm({
 
       <div className="field-grid">
         {FIELDS.map((f) => {
-          const locked = scheduleLocked && f.schedule;
+          const locked = lockedAfterPlay && f.schedule;
           return (
             <label key={f.key} className="field">
               <span>{f.label}</span>
@@ -87,6 +93,26 @@ export function BasicsForm({
         })}
       </div>
 
+      <label className="field points-field">
+        <span>Points to win</span>
+        <select
+          disabled={lockedAfterPlay}
+          value={form.points_to_win}
+          onChange={(e) => setForm({ ...form, points_to_win: Number(e.target.value) as PointsToWin })}
+        >
+          {POINTS_OPTIONS.map((p) => (
+            <option key={p} value={p}>
+              {p} points
+            </option>
+          ))}
+        </select>
+        <small className="muted">
+          {lockedAfterPlay
+            ? "Fixed: matches have been played."
+            : `Games are first to ${n}, win by 2 (e.g. ${exampleScores}).`}
+        </small>
+      </label>
+
       <label className="toggle">
         <input
           type="checkbox"
@@ -103,12 +129,17 @@ export function BasicsForm({
         </span>
       </label>
 
-      <p className="card summary">
-        {matchesPerRound} matches per round
-        {form.num_teams % 2 === 1 && " (one team sits out each round)"} · {totalMatches} matches in
-        the season · each round plays in {wavesPerRound} wave{wavesPerRound === 1 ? "" : "s"} on{" "}
-        {form.num_courts} court{form.num_courts === 1 ? "" : "s"}.
-      </p>
+      <div className="card summary">
+        <p>
+          {matchesPerRound} matches per round
+          {form.num_teams % 2 === 1 && " (one team sits out each round)"} · {totalMatches} matches
+          in the season · each round plays in {wavesPerRound} wave{wavesPerRound === 1 ? "" : "s"}{" "}
+          on {form.num_courts} court{form.num_courts === 1 ? "" : "s"}.
+        </p>
+        <p>
+          Games are first to {form.points_to_win}, win by 2 (e.g. {exampleScores}); no ties.
+        </p>
+      </div>
 
       <div>
         <button type="submit" disabled={saving}>

@@ -153,3 +153,42 @@ def test_edit_refused_while_match_on_court(client, league):
     match = client.get(f"/leagues/{lid}/matches").json()[0]
     client.post(f"/matches/{match['id']}/start", json={})
     assert client.post(f"/leagues/{lid}/edit").status_code == 409
+
+
+def test_dupr_ready_needs_every_player_to_have_a_dupr_id(client):
+    teams = [
+        {"players": [{"name": "A", "dupr_id": "AAAA11"}, {"name": "B", "dupr_id": "BBBB22"}]},
+        {"players": [{"name": "C", "dupr_id": "CCCC33"}, {"name": "D"}]},
+        {"players": [{"name": "E"}, {"name": "F"}]},
+    ]
+    league = set_up_league(client, teams=teams, num_teams=3)
+    shown = {t["display_name"]: t["dupr_ready"] for t in client.get(f"/leagues/{league['id']}/teams").json()}
+    assert shown == {"A & B": True, "C & D": False, "E & F": False}
+
+    # Also on the team references inside matches (used by the live view).
+    refs = {
+        ref["display_name"]: ref["dupr_ready"]
+        for m in client.get(f"/leagues/{league['id']}/matches").json()
+        for ref in (m["team_a"], m["team_b"])
+    }
+    assert refs == shown
+
+
+def test_points_to_win_options_and_lock_after_play(client):
+    assert client.post("/leagues", json={**BASICS, "points_to_win": 13}).status_code == 422
+    assert _new(client)["points_to_win"] == 11  # default
+
+    league = set_up_league(client, points_to_win=21)
+    lid = league["id"]
+    client.post(f"/leagues/{lid}/edit")
+    # Before any play it can still change...
+    assert client.put(f"/leagues/{lid}/setup", json={**BASICS, "points_to_win": 15}).status_code == 200
+    client.post(f"/leagues/{lid}/finalize")
+
+    match = client.get(f"/leagues/{lid}/matches").json()[0]
+    client.put(f"/matches/{match['id']}/result", json={"score_a": 15, "score_b": 3})
+    client.post(f"/leagues/{lid}/edit")
+    # ...but not once results exist under the current rules.
+    resp = client.put(f"/leagues/{lid}/setup", json={**BASICS, "points_to_win": 11})
+    assert resp.status_code == 409
+    assert "points_to_win" in resp.text
