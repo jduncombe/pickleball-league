@@ -78,6 +78,11 @@ class Team(Base):
     )
 
     @property
+    def dupr_ready(self) -> bool:
+        """Every player has a DUPR ID, so the team's matches could be DUPR-rated."""
+        return bool(self.players) and all(p.dupr_id for p in self.players)
+
+    @property
     def display_name(self) -> str:
         """The team name (if the league uses them), else its players' names
         ("Alex & Sam"), else "Team N"."""

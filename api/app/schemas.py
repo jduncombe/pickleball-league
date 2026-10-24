@@ -120,6 +120,8 @@ class TeamRef(ORMModel):
     id: int
     name: str | None
     display_name: str
+    # True when the team has players and all of them have DUPR IDs.
+    dupr_ready: bool
 
 
 class TeamRead(TeamRef):

@@ -70,6 +70,10 @@ restores them.
 Example: 8 teams, 3 rounds/week, 8 weeks → 24 slots, cycle of 7 rounds, 4
 matches per round, 96 matches total; each pairing is played 3–4 times.
 
+With an odd number of teams, a different team sits out each round. The
+Schedule & results screen shows it on the round card ("Bye: …"). Byes aren't
+stored; a round's bye is simply whichever team has no match in it.
+
 The schedule is built when the league is created. It is rebuilt only if
 setup is edited to change the number of teams, weeks or rounds, which is
 possible only before any match has been played (see [Setup](#setup)).
@@ -93,7 +97,16 @@ the lowest free court is used.
 
 Note that "ready to play" matches can overlap — e.g. *A vs B* (round 2) and
 *A vs C* (round 3) can both be listed while A is idle. Once one starts, the
-other moves to "waiting". Organisers generally start the earliest round first.
+other moves to "waiting".
+
+To keep the week on track, the live view **highlights the ready-to-play
+matches from the earliest round** that still has one ("Earliest round"). Those
+are the suggested next games.
+
+Teams whose players **all** have DUPR IDs are shown in a different colour on
+the live view (court cards, ready to play, waiting), with a legend. A match
+between two such teams is one that could be submitted to DUPR. The API
+exposes this as `dupr_ready` on each team.
 
 Matches from a week other than the selected week can still be on court (e.g.
 make-up games); they appear under "On court" and block their teams.

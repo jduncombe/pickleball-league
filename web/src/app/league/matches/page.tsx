@@ -7,7 +7,7 @@ import { ScoreForm } from "@/components/ScoreForm";
 import { ErrorBanner, Loading } from "@/components/Status";
 import { api } from "@/lib/api";
 import { useLoader } from "@/lib/useLoader";
-import type { League, Match } from "@/lib/types";
+import type { League, Match, TeamRef } from "@/lib/types";
 
 export default function MatchesPage() {
   // Bumped whenever a result is saved so the standings reload.
@@ -31,9 +31,16 @@ function WeekSchedule({ league, onResult }: { league: League; onResult: () => vo
     [league.id, week],
   );
 
+  const { data: teams } = useLoader(() => api.listTeams(league.id), [league.id]);
+
   const rounds = new Map<number, Match[]>();
   for (const m of matches ?? []) {
     rounds.set(m.round, [...(rounds.get(m.round) ?? []), m]);
+  }
+
+  function onSaved() {
+    reload();
+    onResult();
   }
 
   return (
@@ -54,32 +61,52 @@ function WeekSchedule({ league, onResult }: { league: League; onResult: () => vo
         !error && <Loading />
       ) : (
         [...rounds.entries()].map(([round, roundMatches]) => (
-          <div key={round} className="card">
-            <h3>Round {round}</h3>
-            <ul className="match-list">
-              {roundMatches.map((m) => (
-                <li key={m.id}>
-                  <span className={`badge ${m.status}`}>
-                    {m.status === "in_progress" ? `Court ${m.court}` : m.status}
-                  </span>
-                  <Matchup match={m} />
-                  <span className="action">
-                    <ScoreForm
-                      key={`${m.id}-${m.status}`}
-                      match={m}
-                      onSaved={() => {
-                        reload();
-                        onResult();
-                      }}
-                    />
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <RoundCard key={round} round={round} matches={roundMatches} teams={teams} onSaved={onSaved} />
         ))
       )}
     </section>
+  );
+}
+
+function RoundCard({
+  round,
+  matches,
+  teams,
+  onSaved,
+}: {
+  round: number;
+  matches: Match[];
+  teams: TeamRef[] | null;
+  onSaved: () => void;
+}) {
+  // With an odd number of teams, whoever has no match this round has a bye.
+  const playing = new Set(matches.flatMap((m) => [m.team_a.id, m.team_b.id]));
+  const byes = (teams ?? []).filter((t) => !playing.has(t.id));
+
+  return (
+    <div className="card">
+      <div className="card-head">
+        <h3>Round {round}</h3>
+        {byes.length > 0 && (
+          <p className="byes muted">
+            Bye: <strong>{byes.map((t) => t.display_name).join(", ")}</strong>
+          </p>
+        )}
+      </div>
+      <ul className="match-list">
+        {matches.map((m) => (
+          <li key={m.id}>
+            <span className={`badge ${m.status}`}>
+              {m.status === "in_progress" ? `Court ${m.court}` : m.status}
+            </span>
+            <Matchup match={m} />
+            <span className="action">
+              <ScoreForm key={`${m.id}-${m.status}`} match={m} onSaved={onSaved} />
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

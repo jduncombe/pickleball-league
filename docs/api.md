@@ -107,7 +107,9 @@ standings, carry `name` and **`display_name`**. Clients should show
 2. otherwise the players' names (`"Alex & Sam"`, or `"Ann, Bo & Cy"` for three);
 3. otherwise `"Team <position>"`.
 
-Full team objects also have `position` (1-based).
+Team references also carry **`dupr_ready`**: true when the team has players
+and every one of them has a DUPR ID. Full team objects also have `position`
+(1-based).
 
 ## Matches
 

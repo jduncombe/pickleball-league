@@ -153,3 +153,22 @@ def test_edit_refused_while_match_on_court(client, league):
     match = client.get(f"/leagues/{lid}/matches").json()[0]
     client.post(f"/matches/{match['id']}/start", json={})
     assert client.post(f"/leagues/{lid}/edit").status_code == 409
+
+
+def test_dupr_ready_needs_every_player_to_have_a_dupr_id(client):
+    teams = [
+        {"players": [{"name": "A", "dupr_id": "AAAA11"}, {"name": "B", "dupr_id": "BBBB22"}]},
+        {"players": [{"name": "C", "dupr_id": "CCCC33"}, {"name": "D"}]},
+        {"players": [{"name": "E"}, {"name": "F"}]},
+    ]
+    league = set_up_league(client, teams=teams, num_teams=3)
+    shown = {t["display_name"]: t["dupr_ready"] for t in client.get(f"/leagues/{league['id']}/teams").json()}
+    assert shown == {"A & B": True, "C & D": False, "E & F": False}
+
+    # Also on the team references inside matches (used by the live view).
+    refs = {
+        ref["display_name"]: ref["dupr_ready"]
+        for m in client.get(f"/leagues/{league['id']}/matches").json()
+        for ref in (m["team_a"], m["team_b"])
+    }
+    assert refs == shown

@@ -8,6 +8,8 @@
   --accent-contrast: #ffffff;
   --live: #d9831f;
   --danger: #c0392b;
+  --dupr: #1d5fd1;
+  --suggested-bg: #eaf5ee;
   --radius: 10px;
   color-scheme: light;
 }
@@ -23,6 +25,8 @@
     --accent-contrast: #0e1a12;
     --live: #f0a14a;
     --danger: #ef6f60;
+    --dupr: #7fb0ff;
+    --suggested-bg: #1f3326;
     color-scheme: dark;
   }
 }
@@ -185,3 +189,29 @@ table.compact th, table.compact td { padding: 5px 6px; }
 .league-nav-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 .empty-state { align-items: flex-start; }
 input:disabled { opacity: 0.6; }
+
+/* --- Live view: DUPR colour, suggested matches, court scoreboard -------- */
+.dupr { color: var(--dupr); }
+.legend { display: inline-flex; align-items: center; gap: 6px; }
+.dupr-swatch { width: 0.8em; height: 0.8em; border-radius: 2px; background: var(--dupr); display: inline-block; }
+
+.match-list li.suggested {
+  background: var(--suggested-bg);
+  border-left: 4px solid var(--accent);
+  padding-left: 10px;
+  margin-left: -14px;
+  border-radius: 6px;
+}
+.badge.suggested { background: var(--accent); border-color: var(--accent); color: var(--accent-contrast); }
+
+.scoreboard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 4.5em;
+  align-items: center;
+  gap: 8px 12px;
+}
+.scoreboard .team { overflow-wrap: anywhere; }
+.scoreboard input { width: 100%; text-align: center; }
+.scoreboard button, .scoreboard .error { grid-column: 1 / -1; }
+
+.byes { margin: 0; font-size: 0.9rem; }

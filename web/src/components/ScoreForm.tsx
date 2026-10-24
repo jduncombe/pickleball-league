@@ -2,10 +2,25 @@
 
 import { useState } from "react";
 import { api } from "@/lib/api";
-import type { Match } from "@/lib/types";
+import type { Match, TeamRef } from "@/lib/types";
+import { TeamName } from "./TeamName";
 
-/** Inline score entry for a match. Calls `onSaved` after a successful save. */
-export function ScoreForm({ match, onSaved }: { match: Match; onSaved: () => void }) {
+/**
+ * Score entry for a match. Calls `onSaved` after a successful save.
+ * "inline": two boxes in a row (schedule list). "board": a team per row,
+ * name beside its box (live court cards).
+ */
+export function ScoreForm({
+  match,
+  onSaved,
+  layout = "inline",
+  showDupr = false,
+}: {
+  match: Match;
+  onSaved: () => void;
+  layout?: "inline" | "board";
+  showDupr?: boolean;
+}) {
   const [a, setA] = useState(match.score_a?.toString() ?? "");
   const [b, setB] = useState(match.score_b?.toString() ?? "");
   const [error, setError] = useState<string | null>(null);
@@ -25,29 +40,43 @@ export function ScoreForm({ match, onSaved }: { match: Match; onSaved: () => voi
     }
   }
 
+  const scoreInput = (team: TeamRef, value: string, set: (v: string) => void) => (
+    <input
+      aria-label={`${team.display_name} score`}
+      type="number"
+      inputMode="numeric"
+      min={0}
+      max={99}
+      required
+      value={value}
+      onChange={(e) => set(e.target.value)}
+    />
+  );
+  const saveLabel = match.status === "completed" ? "Update" : "Save";
+
+  if (layout === "board") {
+    // One row per team, name beside its score box, so the two line up.
+    return (
+      <form className="scoreboard" onSubmit={submit}>
+        <TeamName team={match.team_a} showDupr={showDupr} className="team" />
+        {scoreInput(match.team_a, a, setA)}
+        <TeamName team={match.team_b} showDupr={showDupr} className="team" />
+        {scoreInput(match.team_b, b, setB)}
+        <button type="submit" disabled={saving}>
+          {saveLabel} score
+        </button>
+        {error && <span className="error inline">{error}</span>}
+      </form>
+    );
+  }
+
   return (
     <form className="score-form" onSubmit={submit}>
-      <input
-        aria-label={`${match.team_a.display_name} score`}
-        type="number"
-        min={0}
-        max={99}
-        required
-        value={a}
-        onChange={(e) => setA(e.target.value)}
-      />
+      {scoreInput(match.team_a, a, setA)}
       <span>–</span>
-      <input
-        aria-label={`${match.team_b.display_name} score`}
-        type="number"
-        min={0}
-        max={99}
-        required
-        value={b}
-        onChange={(e) => setB(e.target.value)}
-      />
+      {scoreInput(match.team_b, b, setB)}
       <button type="submit" disabled={saving}>
-        {match.status === "completed" ? "Update" : "Save"}
+        {saveLabel}
       </button>
       {error && <span className="error inline">{error}</span>}
     </form>

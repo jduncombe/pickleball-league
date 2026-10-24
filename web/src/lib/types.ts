@@ -53,6 +53,8 @@ export interface TeamRef {
   name: string | null;
   /** name (if the league uses team names), else the players' names ("Alex & Sam"), else "Team N". */
   display_name: string;
+  /** Every player on the team has a DUPR ID. */
+  dupr_ready: boolean;
 }
 
 export interface Team extends TeamRef {
