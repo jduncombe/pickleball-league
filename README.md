@@ -60,8 +60,8 @@ npm run dev                             # http://localhost:3000 (/api/* forwarde
 | Screen | Route | What it does |
 | --- | --- | --- |
 | **Live dashboard** (default) | `/` and `/league/?id=…` | Teams on court right now, and this week's match-ups that can start because neither team is playing. Start a match on a free court, enter its score, or return it to the schedule. |
-| League creation | `/leagues/new` | Name, number of teams, weeks, rounds per week and courts. Creates placeholder teams and the full season schedule. |
-| Teams & players | `/league/teams/?id=…` | Rename teams; add players with optional email and **DUPR ID**. |
+| League creation | `/leagues/new` | Name, number of teams, weeks, rounds per week and courts, plus each team: an **optional name** and its players (optional email and **DUPR ID**). Teams are created once, here, along with the full season schedule. |
+| Teams & players | `/league/teams/?id=…` | Correct teams after setup: set or clear a team's name, add or remove players. Teams without a name are shown by their players' names. |
 | Schedule & results | `/league/matches/?id=…` | Week-by-week schedule grouped by round, score entry/correction, standings. |
 | Leagues | `/leagues` | All leagues. |
 

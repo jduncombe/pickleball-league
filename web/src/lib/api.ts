@@ -67,6 +67,7 @@ export const api = {
 
   // Teams & players
   listTeams: (leagueId: number) => request<Team[]>(`/leagues/${leagueId}/teams`),
+  /** Set the team's name; an empty string clears it. */
   renameTeam: (teamId: number, name: string) =>
     request<Team>(`/teams/${teamId}`, { method: "PATCH", body: json({ name }) }),
   addPlayer: (teamId: number, body: PlayerInput) =>

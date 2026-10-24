@@ -96,7 +96,7 @@ input:user-invalid { border-color: var(--danger); }
 .field > span { font-weight: 600; }
 .field-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
 .inline-form { display: flex; gap: 8px; align-items: center; }
-.team-name { font-weight: 700; font-size: 1.05rem; flex: 1; }
+.inline-form input { flex: 1; }
 
 /* --- Cards & lists ----------------------------------------------------- */
 .card {
@@ -152,4 +152,18 @@ table.compact th, table.compact td { padding: 5px 6px; }
   .grid.wide { grid-template-columns: 1fr; }
   .add-player { grid-template-columns: 1fr 1fr; }
   .nav nav { gap: 10px; }
+}
+
+/* --- League setup ------------------------------------------------------- */
+.setup { max-width: 960px; }
+.team-setup { margin: 0; min-width: 0; }
+.player-row { display: grid; grid-template-columns: 1.4fr 1fr 1.4fr auto; gap: 6px; align-items: center; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+@media (max-width: 720px) {
+  .player-row { grid-template-columns: 1fr 1fr auto; }
+  .player-row input[type="email"] { grid-column: 1 / 3; }
 }

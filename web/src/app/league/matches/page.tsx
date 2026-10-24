@@ -103,7 +103,7 @@ function Standings({ leagueId, version }: { leagueId: number; version: number })
           <tbody>
             {rows.map((r) => (
               <tr key={r.team.id}>
-                <td>{r.team.name}</td>
+                <td>{r.team.display_name}</td>
                 <td>{r.played}</td>
                 <td>{r.wins}</td>
                 <td>{r.losses}</td>
