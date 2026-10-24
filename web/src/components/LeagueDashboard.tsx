@@ -112,7 +112,13 @@ export function LeagueDashboard({ leagueId }: { leagueId: number }) {
                     Week {m.week} · Round {m.round}
                   </span>
                 </div>
-                <ScoreForm match={m} onSaved={reload} layout="board" showDupr />
+                <ScoreForm
+                  match={m}
+                  pointsToWin={league.points_to_win}
+                  onSaved={reload}
+                  layout="board"
+                  showDupr
+                />
                 <button className="link" onClick={() => act(() => api.cancelMatch(m.id))}>
                   Return to schedule
                 </button>

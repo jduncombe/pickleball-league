@@ -6,6 +6,7 @@ from sqlalchemy import select
 from .. import schemas
 from ..deps import DB, get_or_404
 from ..models import LeagueStatus, Match, MatchStatus
+from ..scoring import check_score
 
 router = APIRouter(prefix="/matches", tags=["matches"])
 
@@ -70,11 +71,43 @@ def cancel_match(match_id: int, db: DB):
 
 @router.put("/{match_id}/result", response_model=schemas.MatchRead)
 def record_result(match_id: int, payload: schemas.MatchResult, db: DB):
-    """Record (or correct) a final score. Frees the court if the match was on one."""
+    """Record (or correct) a final score. Frees the court if the match was on one.
+
+    Scores must follow the league's rules (first to points_to_win, win by 2);
+    an invalid score is a 422 naming the score field(s) at fault. Verified
+    results are locked (409).
+    """
     match = _get_playable(db, match_id)
+    if match.verified_at is not None:
+        raise HTTPException(409, "This result has been verified and can't be changed")
+
+    problem = check_score(payload.score_a, payload.score_b, match.league.points_to_win)
+    if problem:
+        # Same shape as FastAPI's own validation errors, so clients can
+        # highlight the offending field(s) from `loc`.
+        raise HTTPException(
+            422,
+            [
+                {"loc": ["body", field], "msg": problem.message, "type": "score_rules"}
+                for field in problem.fields
+            ],
+        )
+
     match.score_a = payload.score_a
     match.score_b = payload.score_b
     match.status = MatchStatus.COMPLETED
     match.completed_at = datetime.now(timezone.utc)
     db.commit()
+    return match
+
+
+@router.post("/{match_id}/verify", response_model=schemas.MatchRead)
+def verify_result(match_id: int, db: DB):
+    """Verify a completed match's result. The score is then locked for good."""
+    match = _get_playable(db, match_id)
+    if match.status != MatchStatus.COMPLETED:
+        raise HTTPException(409, "Only completed matches can be verified")
+    if match.verified_at is None:
+        match.verified_at = datetime.now(timezone.utc)
+        db.commit()
     return match

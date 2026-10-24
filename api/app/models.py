@@ -36,6 +36,8 @@ class League(Base):
     num_weeks: Mapped[int] = mapped_column(Integer)
     rounds_per_week: Mapped[int] = mapped_column(Integer)
     num_courts: Mapped[int] = mapped_column(Integer)
+    # Games are first to this many points, win by 2 (see scoring.py).
+    points_to_win: Mapped[int] = mapped_column(Integer, default=11)
     # When false, teams are known by their players' names (see Team.display_name).
     use_team_names: Mapped[bool] = mapped_column(Boolean, default=False)
     status: Mapped[LeagueStatus] = mapped_column(
@@ -128,6 +130,8 @@ class Match(Base):
     score_b: Mapped[int | None] = mapped_column(Integer, nullable=True)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Set when an organiser verifies the result; the score is then locked.
+    verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     league: Mapped[League] = relationship(back_populates="matches")
     team_a: Mapped[Team] = relationship(foreign_keys=[team_a_id])

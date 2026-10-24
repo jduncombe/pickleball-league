@@ -172,3 +172,23 @@ def test_dupr_ready_needs_every_player_to_have_a_dupr_id(client):
         for ref in (m["team_a"], m["team_b"])
     }
     assert refs == shown
+
+
+def test_points_to_win_options_and_lock_after_play(client):
+    assert client.post("/leagues", json={**BASICS, "points_to_win": 13}).status_code == 422
+    assert _new(client)["points_to_win"] == 11  # default
+
+    league = set_up_league(client, points_to_win=21)
+    lid = league["id"]
+    client.post(f"/leagues/{lid}/edit")
+    # Before any play it can still change...
+    assert client.put(f"/leagues/{lid}/setup", json={**BASICS, "points_to_win": 15}).status_code == 200
+    client.post(f"/leagues/{lid}/finalize")
+
+    match = client.get(f"/leagues/{lid}/matches").json()[0]
+    client.put(f"/matches/{match['id']}/result", json={"score_a": 15, "score_b": 3})
+    client.post(f"/leagues/{lid}/edit")
+    # ...but not once results exist under the current rules.
+    resp = client.put(f"/leagues/{lid}/setup", json={**BASICS, "points_to_win": 11})
+    assert resp.status_code == 409
+    assert "points_to_win" in resp.text

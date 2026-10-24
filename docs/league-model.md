@@ -116,5 +116,20 @@ make-up games); they appear under "On court" and block their teams.
 - A result can be entered for a match in any status: from the court card when
   it finishes, or later from the Schedule & results screen (e.g. paper score
   sheets). Entering a result frees the court.
-- Ties are rejected (pickleball games are played to a win).
+- **Scoring rules.** Each league sets **points to win** at setup: 11, 15 or 21
+  (default 11). A game is first to that many points and must be **won by 2**;
+  there are no ties. If the score reaches one below the target each (14-14
+  in a game to 15), play continues until one side leads by 2. So, for games
+  to 15:
+  - valid: 15-13, 15-0, 16-14, 22-20;
+  - invalid: 15-14 (not won by 2, play continues), 16-13 (the game would
+    have ended at 15-13), 14-12 (nobody reached 15), and any tie.
+
+  Scores are checked as they're saved, in the browser and again by the API
+  (`api/app/scoring.py`, mirrored in `web/src/lib/scoring.ts`). The box that
+  is most likely wrong is highlighted, with a message suggesting a valid
+  score. Points to win can't change once a match has been played.
+- **Verifying results.** On Schedule & results, a completed match has a
+  **Verify** button. A verified result is locked: it shows "verified" with a
+  lock, and the API refuses any change to it. There is no un-verify.
 - Standings order: wins, then point differential, then points scored.

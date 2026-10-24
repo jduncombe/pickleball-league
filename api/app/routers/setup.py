@@ -4,8 +4,8 @@ A league starts in setup. "Create the league" (finalize) validates the setup,
 builds the schedule and makes the league active; teams and players are then
 fixed. "Edit setup" (edit) puts an active league back into setup. Once any
 match has been played, the season's shape (number of teams, weeks, rounds per
-week) can no longer change, since that would invalidate results; names,
-players and courts can.
+week) and the points to win can no longer change, since that would invalidate
+results; names, players and courts can.
 """
 
 from datetime import datetime, timezone
@@ -21,6 +21,9 @@ router = APIRouter(prefix="/leagues", tags=["league setup"])
 
 # Changing any of these means a different schedule.
 SCHEDULE_FIELDS = ("num_teams", "num_weeks", "rounds_per_week")
+# Fixed once a match has been played: the schedule, and the scoring rules
+# that existing results were validated against.
+LOCKED_AFTER_PLAY = (*SCHEDULE_FIELDS, "points_to_win")
 
 
 def _require_setup(league: League) -> None:
@@ -61,13 +64,13 @@ def update_basics(league_id: int, payload: schemas.LeagueBasics, db: DB):
     league = get_or_404(db, League, league_id)
     _require_setup(league)
 
-    changed = [f for f in SCHEDULE_FIELDS if getattr(payload, f) != getattr(league, f)]
-    if changed:
-        if league.has_played_matches:
+    if league.has_played_matches:
+        locked = [f for f in LOCKED_AFTER_PLAY if getattr(payload, f) != getattr(league, f)]
+        if locked:
             raise HTTPException(
-                409,
-                "Matches have been played, so these can't change: " + ", ".join(changed),
+                409, "Matches have been played, so these can't change: " + ", ".join(locked)
             )
+    if any(getattr(payload, f) != getattr(league, f) for f in SCHEDULE_FIELDS):
         # The schedule no longer fits; it is rebuilt when the league is created.
         league.matches.clear()
         db.flush()

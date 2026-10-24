@@ -66,11 +66,14 @@ Basics (step 1):
   "num_weeks": 8,
   "rounds_per_week": 3,
   "num_courts": 4,
+  "points_to_win": 15,
   "use_team_names": false
 }
 ```
 
 Limits: teams 2–64, weeks 1–52, rounds per week 1–20, courts 1–50.
+`points_to_win` is 11, 15 or 21 (default 11); like the number of teams, weeks
+and rounds, it can't change once a match has been played.
 
 Teams (step 2):
 
@@ -120,7 +123,17 @@ Match actions (start, cancel, result) return 409 while the league is in setup.
 | `GET` | `/matches/{id}` | Get a match |
 | `POST` | `/matches/{id}/start` | Put on court: `{"court": 2}` or `{}` for the lowest free court. 409 if a team or the court is busy. |
 | `POST` | `/matches/{id}/cancel` | Take an in-progress match off court, back to `scheduled` |
-| `PUT` | `/matches/{id}/result` | Record/correct a score: `{"score_a": 11, "score_b": 7}`. Ties rejected. |
+| `PUT` | `/matches/{id}/result` | Record/correct a score: `{"score_a": 11, "score_b": 7}`. Must follow the league's rules (first to `points_to_win`, win by 2). 409 once verified. |
+| `POST` | `/matches/{id}/verify` | Verify a completed match's result, locking it. 409 if the match isn't completed. |
+
+An invalid score is a 422 in FastAPI's validation-error shape, with `loc`
+naming the score field(s) most likely wrong (see
+[league-model.md](league-model.md#results--standings)):
+
+```json
+{ "detail": [{ "loc": ["body", "score_b"], "type": "score_rules",
+  "msg": "15-14 isn't finished: a game must be won by 2, so play continues (e.g. 16-14)" }] }
+```
 
 Match object:
 
@@ -132,7 +145,7 @@ Match object:
   "team_a": { "id": 1, "name": "Dink Dynasty", "display_name": "Dink Dynasty" },
   "team_b": { "id": 4, "name": null, "display_name": "Jo & Kim" },
   "score_a": null, "score_b": null,
-  "started_at": "2026-09-30T18:05:00Z", "completed_at": null
+  "started_at": "2026-09-30T18:05:00Z", "completed_at": null, "verified_at": null
 }
 ```
 

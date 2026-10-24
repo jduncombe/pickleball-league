@@ -61,7 +61,14 @@ function WeekSchedule({ league, onResult }: { league: League; onResult: () => vo
         !error && <Loading />
       ) : (
         [...rounds.entries()].map(([round, roundMatches]) => (
-          <RoundCard key={round} round={round} matches={roundMatches} teams={teams} onSaved={onSaved} />
+          <RoundCard
+            key={round}
+            round={round}
+            matches={roundMatches}
+            teams={teams}
+            pointsToWin={league.points_to_win}
+            onSaved={onSaved}
+          />
         ))
       )}
     </section>
@@ -72,11 +79,13 @@ function RoundCard({
   round,
   matches,
   teams,
+  pointsToWin,
   onSaved,
 }: {
   round: number;
   matches: Match[];
   teams: TeamRef[] | null;
+  pointsToWin: number;
   onSaved: () => void;
 }) {
   // With an odd number of teams, whoever has no match this round has a bye.
@@ -96,17 +105,56 @@ function RoundCard({
       <ul className="match-list">
         {matches.map((m) => (
           <li key={m.id}>
-            <span className={`badge ${m.status}`}>
-              {m.status === "in_progress" ? `Court ${m.court}` : m.status}
+            <span className={`badge ${m.verified_at ? "verified" : m.status}`}>
+              {m.verified_at ? "✓ verified" : m.status === "in_progress" ? `Court ${m.court}` : m.status}
             </span>
             <Matchup match={m} />
             <span className="action">
-              <ScoreForm key={`${m.id}-${m.status}`} match={m} onSaved={onSaved} />
+              {m.verified_at ? (
+                <span className="muted" title="Verified results can't be changed">
+                  🔒 Locked
+                </span>
+              ) : (
+                <span className="result-actions">
+                  <ScoreForm
+                    key={`${m.id}-${m.status}-${m.score_a}-${m.score_b}`}
+                    match={m}
+                    pointsToWin={pointsToWin}
+                    onSaved={onSaved}
+                  />
+                  {m.status === "completed" && <VerifyButton match={m} onVerified={onSaved} />}
+                </span>
+              )}
             </span>
           </li>
         ))}
       </ul>
     </div>
+  );
+}
+
+function VerifyButton({ match, onVerified }: { match: Match; onVerified: () => void }) {
+  const [busy, setBusy] = useState(false);
+
+  async function verify() {
+    const score = `${match.team_a.display_name} ${match.score_a} – ${match.score_b} ${match.team_b.display_name}`;
+    if (!window.confirm(`Verify this result?\n\n${score}\n\nVerified results are locked and can't be changed.`)) {
+      return;
+    }
+    setBusy(true);
+    try {
+      await api.verifyMatch(match.id);
+      onVerified();
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : String(err));
+      setBusy(false);
+    }
+  }
+
+  return (
+    <button type="button" className="secondary small" disabled={busy} onClick={verify}>
+      Verify
+    </button>
   );
 }
 

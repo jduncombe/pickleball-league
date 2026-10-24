@@ -215,3 +215,15 @@ input:disabled { opacity: 0.6; }
 .scoreboard button, .scoreboard .error { grid-column: 1 / -1; }
 
 .byes { margin: 0; font-size: 0.9rem; }
+
+/* --- Score validation & verification ------------------------------------ */
+input.invalid, input[aria-invalid="true"] {
+  border-color: var(--danger);
+  outline: 2px solid var(--danger);
+  outline-offset: 0;
+  background: color-mix(in srgb, var(--danger) 8%, var(--surface));
+}
+.score-form .error { flex-basis: 100%; }
+.result-actions { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; justify-content: flex-end; }
+.badge.verified { color: var(--accent); border-color: var(--accent); font-weight: 600; }
+.points-field select { max-width: 12em; }

@@ -1,6 +1,7 @@
 """Pydantic request/response schemas."""
 
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -22,6 +23,7 @@ class LeagueBasics(BaseModel):
     num_weeks: int = Field(ge=1, le=52)
     rounds_per_week: int = Field(ge=1, le=20)
     num_courts: int = Field(ge=1, le=50)
+    points_to_win: Literal[11, 15, 21] = 11
     use_team_names: bool = False
 
 
@@ -38,10 +40,11 @@ class LeagueRead(ORMModel):
     num_weeks: int
     rounds_per_week: int
     num_courts: int
+    points_to_win: int
     use_team_names: bool
     status: LeagueStatus
     created_league_at: datetime | None
-    # Once true, num_teams/num_weeks/rounds_per_week can't change in setup.
+    # Once true, num_teams/num_weeks/rounds_per_week/points_to_win can't change in setup.
     has_played_matches: bool
     current_week: int
     created_at: datetime
@@ -146,6 +149,7 @@ class MatchRead(ORMModel):
     score_b: int | None
     started_at: datetime | None
     completed_at: datetime | None
+    verified_at: datetime | None
 
 
 class MatchStart(BaseModel):
@@ -155,15 +159,9 @@ class MatchStart(BaseModel):
 
 
 class MatchResult(BaseModel):
+    # Checked against the league's points_to_win in routers/matches.py.
     score_a: int = Field(ge=0, le=99)
     score_b: int = Field(ge=0, le=99)
-
-    @field_validator("score_b")
-    @classmethod
-    def no_ties(cls, score_b, info):
-        if info.data.get("score_a") == score_b:
-            raise ValueError("pickleball matches cannot end in a tie")
-        return score_b
 
 
 # --- Dashboard / standings -------------------------------------------------------

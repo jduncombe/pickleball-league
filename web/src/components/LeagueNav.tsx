@@ -7,6 +7,8 @@ import { api } from "@/lib/api";
 import { type LeaguePath, leagueHref, setupHref } from "@/lib/routes";
 import type { League } from "@/lib/types";
 
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
 export function LeagueNav({ league }: { league: League }) {
   const pathname = usePathname();
   const current = pathname.replace(/\/$/, "") || "/";
@@ -25,8 +27,9 @@ export function LeagueNav({ league }: { league: League }) {
           {league.name} {inSetup && <span className="badge">in setup</span>}
         </h1>
         <p className="muted">
-          {league.num_teams} teams · {league.num_weeks} weeks · {league.rounds_per_week} rounds/week ·{" "}
-          {league.num_courts} courts
+          {league.num_teams} teams · {plural(league.num_weeks, "week")} · {league.rounds_per_week}{" "}
+          {league.rounds_per_week === 1 ? "round" : "rounds"}/week · {plural(league.num_courts, "court")} ·
+          games to {league.points_to_win}
         </p>
       </div>
       <div className="league-nav-actions">
