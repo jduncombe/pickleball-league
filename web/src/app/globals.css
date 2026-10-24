@@ -13,11 +13,14 @@ body {
 }
 
 main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 64px; }
-h1, h2, h3 { margin: 0 0 8px; line-height: 1.2; font-family: var(--font-heading); }
+h1, h2, h3 {
+  margin: 0 0 8px; line-height: 1.2; font-family: var(--font-heading);
+  font-weight: var(--heading-weight, 700); text-transform: var(--heading-transform, none);
+}
 h1 { font-size: 1.6rem; }
 h2 { font-size: 1.15rem; }
 h3 { font-size: 1rem; }
-a { color: var(--accent); }
+a { color: var(--accent-text, var(--accent)); }
 code { font-size: 0.9em; }
 
 .muted { color: var(--muted); }
@@ -29,15 +32,19 @@ code { font-size: 0.9em; }
 /* --- Navigation -------------------------------------------------------- */
 .nav {
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
-  padding: 12px 16px; background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 12px 16px; background: var(--header-bg, var(--surface));
+  border-bottom: 1px solid var(--header-border, var(--border));
 }
 .nav nav { display: flex; gap: 16px; align-items: center; }
-.nav a { text-decoration: none; color: var(--text); }
+.nav a { text-decoration: none; color: var(--header-text, var(--text)); }
 .nav .brand { font-weight: 700; display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-heading); }
 .nav .brand img { display: block; max-width: 45vw; height: auto; }
 .nav .brand .logo-compact, .brand-short { display: none; }
 .site-footer { max-width: 1100px; margin: 0 auto; padding: 0 16px 32px; font-size: 0.85rem; }
-.nav a.button { color: var(--accent-contrast); }
+.nav a.button {
+  background: var(--header-button-bg, var(--accent)); border-color: var(--header-button-bg, var(--accent));
+  color: var(--header-button-text, var(--accent-contrast));
+}
 
 .league-nav {
   display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between;
@@ -99,11 +106,11 @@ input:user-invalid { border-color: var(--danger); }
   background: var(--bg); border: 1px solid var(--border); color: var(--muted); white-space: nowrap;
 }
 .badge.live, .badge.in_progress { background: var(--live); border-color: var(--live); color: var(--live-contrast); }
-.badge.completed { color: var(--accent); border-color: var(--accent); }
+.badge.completed { color: var(--accent-text, var(--accent)); border-color: var(--accent-text, var(--accent)); }
 
 .matchup { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
 .matchup .vs { color: var(--muted); font-variant-numeric: tabular-nums; }
-.matchup .winner { color: var(--accent); }
+.matchup .winner { color: var(--accent-text, var(--accent)); }
 
 .match-list { list-style: none; margin: 0; padding: 0; }
 .match-list li {
@@ -206,5 +213,5 @@ input.invalid, input[aria-invalid="true"] {
 }
 .score-form .error { flex-basis: 100%; }
 .result-actions { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; justify-content: flex-end; }
-.badge.verified { color: var(--accent); border-color: var(--accent); font-weight: 600; }
+.badge.verified { color: var(--accent-text, var(--accent)); border-color: var(--accent-text, var(--accent)); font-weight: 600; }
 .points-field select { max-width: 12em; }

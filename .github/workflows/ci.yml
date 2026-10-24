@@ -74,6 +74,14 @@ jobs:
         run: test -f out/index.html && test -f out/league/teams/index.html && test -f out/404.html
       # White-labelling: the sample brand must build, with none of the default
       # brand's name leaking into it.
+      - name: Build every brand
+        run: |
+          for dir in brands/*/; do
+            brand=$(basename "$dir")
+            echo "::group::BRAND=$brand"
+            BRAND=$brand npm run build
+            echo "::endgroup::"
+          done
       - name: Build the example brand
         run: |
           BRAND=example npm run build

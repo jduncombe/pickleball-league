@@ -70,13 +70,23 @@ and for dark mode:
 | `--font-body`, `--font-heading`, `--font-size` | Body and heading typefaces, base size |
 | `--radius`, `--radius-control` | Card corners; button and input corners |
 
+Optional tokens. When a brand doesn't set them, they fall back as shown:
+
+| Token | Falls back to | Used for |
+| --- | --- | --- |
+| `--accent-text` | `--accent` | The accent as **text** on surfaces: links, winners, "completed"/"verified" badges. Set this when the accent is a light colour that's fine as a button background but unreadable as text (e.g. lime on white). |
+| `--header-bg`, `--header-text`, `--header-border` | `--surface`, `--text`, `--border` | The top bar |
+| `--header-button-bg`, `--header-button-text` | `--accent`, `--accent-contrast` | The "New league" button in the top bar (so it stays visible on a coloured bar) |
+| `--heading-weight`, `--heading-transform` | `700`, `none` | Heading weight and case (e.g. `uppercase`) |
+
 See [`web/brands/default/theme.css`](../web/brands/default/theme.css) for the
 defaults. A brand that wants a web font can add an `@import` (e.g. Google
 Fonts) at the top of its `theme.css` and name the font in `--font-body` or
 `--font-heading`.
 
 Check text contrast in both modes (`--accent-contrast` on `--accent`,
-`--text` on `--surface`, and so on).
+`--text` on `--surface`, `--accent-text` on `--surface`, `--header-text` on
+`--header-bg`, and so on). Aim for WCAG AA, 4.5:1.
 
 ### 3. Images
 
@@ -154,7 +164,8 @@ The API's docs page title (`/api/docs`) uses `APP_NAME` (default
 
 ## CI
 
-CI builds the `example` brand on every PR. It checks the page title, and
+CI builds **every** brand folder on every PR, so a broken brand fails the
+PR. For the `example` brand it also checks the page title, and
 fails if the default name ("Pickleball League") appears anywhere in the
 output, which would mean something branded was hard-coded. The API tests
 check that the API's default terms match the web app's, and that a brand's
