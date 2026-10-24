@@ -10,6 +10,12 @@ variable "project" {
   default     = "pickleball-league"
 }
 
+variable "app_name" {
+  description = "Product name shown by the API (docs title). Match the web brand when white-labelling."
+  type        = string
+  default     = "Pickleball League"
+}
+
 variable "environment" {
   description = "Environment name, used for tagging."
   type        = string

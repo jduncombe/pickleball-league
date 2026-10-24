@@ -1,35 +1,7 @@
-:root {
-  --bg: #f6f7f4;
-  --surface: #ffffff;
-  --text: #1d2521;
-  --muted: #6b7570;
-  --border: #dde2dc;
-  --accent: #2f7d4f;
-  --accent-contrast: #ffffff;
-  --live: #d9831f;
-  --danger: #c0392b;
-  --dupr: #1d5fd1;
-  --suggested-bg: #eaf5ee;
-  --radius: 10px;
-  color-scheme: light;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #131714;
-    --surface: #1c221e;
-    --text: #e6ebe7;
-    --muted: #97a39c;
-    --border: #2d3630;
-    --accent: #5cbf83;
-    --accent-contrast: #0e1a12;
-    --live: #f0a14a;
-    --danger: #ef6f60;
-    --dupr: #7fb0ff;
-    --suggested-bg: #1f3326;
-    color-scheme: dark;
-  }
-}
+/*
+ * Layout and component styles. Colours, fonts and radii come only from the
+ * theme tokens defined by the active brand (web/brands/<brand>/theme.css).
+ */
 
 * { box-sizing: border-box; }
 
@@ -37,11 +9,11 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font: var(--font-size)/1.5 var(--font-body);
 }
 
 main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 64px; }
-h1, h2, h3 { margin: 0 0 8px; line-height: 1.2; }
+h1, h2, h3 { margin: 0 0 8px; line-height: 1.2; font-family: var(--font-heading); }
 h1 { font-size: 1.6rem; }
 h2 { font-size: 1.15rem; }
 h3 { font-size: 1rem; }
@@ -61,7 +33,10 @@ code { font-size: 0.9em; }
 }
 .nav nav { display: flex; gap: 16px; align-items: center; }
 .nav a { text-decoration: none; color: var(--text); }
-.nav .brand { font-weight: 700; }
+.nav .brand { font-weight: 700; display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-heading); }
+.nav .brand img { display: block; max-width: 45vw; height: auto; }
+.nav .brand .logo-compact, .brand-short { display: none; }
+.site-footer { max-width: 1100px; margin: 0 auto; padding: 0 16px 32px; font-size: 0.85rem; }
 .nav a.button { color: var(--accent-contrast); }
 
 .league-nav {
@@ -80,7 +55,7 @@ code { font-size: 0.9em; }
 
 /* --- Controls ---------------------------------------------------------- */
 button, .button {
-  display: inline-block; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--accent);
+  display: inline-block; padding: 8px 14px; border-radius: var(--radius-control); border: 1px solid var(--accent);
   background: var(--accent); color: var(--accent-contrast); font: inherit; font-weight: 600;
   cursor: pointer; text-decoration: none;
 }
@@ -92,7 +67,7 @@ button.link.danger { color: var(--danger); text-decoration: none; }
 
 input, select {
   font: inherit; color: var(--text); background: var(--surface);
-  border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; min-width: 0;
+  border: 1px solid var(--border); border-radius: var(--radius-control); padding: 7px 10px; min-width: 0;
 }
 input:user-invalid { border-color: var(--danger); }
 
@@ -123,7 +98,7 @@ input:user-invalid { border-color: var(--danger); }
   display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.8rem;
   background: var(--bg); border: 1px solid var(--border); color: var(--muted); white-space: nowrap;
 }
-.badge.live, .badge.in_progress { background: var(--live); border-color: var(--live); color: #fff; }
+.badge.live, .badge.in_progress { background: var(--live); border-color: var(--live); color: var(--live-contrast); }
 .badge.completed { color: var(--accent); border-color: var(--accent); }
 
 .matchup { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
@@ -154,6 +129,10 @@ table.compact th, table.compact td { padding: 5px 6px; }
 .empty { text-align: center; padding: 64px 16px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
 
 @media (max-width: 720px) {
+  .brand-name, .nav .brand .logo-full { display: none; }
+  .brand-short { display: inline; }
+  .nav .brand .logo-compact { display: block; }
+  .nav { flex-wrap: wrap; }
   .two-col { grid-template-columns: 1fr; }
   .grid.wide { grid-template-columns: 1fr; }
   .add-player { grid-template-columns: 1fr 1fr; }

@@ -4,6 +4,7 @@ services:
     environment:
       DATABASE_URL: sqlite:////data/pickleball.db
       ROOT_PATH: /api
+      APP_NAME: ${APP_NAME:-Pickleball League}
     volumes:
       - api-data:/data
     ports:
@@ -15,7 +16,11 @@ services:
       retries: 5
 
   web:
-    build: ./web
+    build:
+      context: ./web
+      args:
+        # White-label brand folder in web/brands/ (e.g. BRAND=example docker compose up --build)
+        BRAND: ${BRAND:-default}
     environment:
       # nginx serves the static site and proxies /api/* here (container network).
       API_URL: http://api:8000

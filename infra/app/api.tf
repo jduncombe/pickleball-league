@@ -153,6 +153,7 @@ resource "aws_ecs_task_definition" "api" {
       { name = "DB_PORT", value = tostring(aws_db_instance.main.port) },
       { name = "DB_NAME", value = aws_db_instance.main.db_name },
       { name = "ROOT_PATH", value = "/api" },
+      { name = "APP_NAME", value = var.app_name },
       # Browsers reach the API same-origin through CloudFront; no CORS needed.
       { name = "CORS_ORIGINS", value = "" },
     ]

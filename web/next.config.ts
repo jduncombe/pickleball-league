@@ -1,6 +1,16 @@
+import { existsSync } from "node:fs";
+import path from "node:path";
 import type { NextConfig } from "next";
 
 const isDev = process.env.NODE_ENV === "development";
+
+// White-label brand: web/brands/<BRAND>/ (default: "default"), imported in
+// code as "@brand/...". See docs/white-labelling.md.
+const brandName = process.env.BRAND || "default";
+const brandDir = path.resolve("brands", brandName);
+if (!existsSync(path.join(brandDir, "brand.ts"))) {
+  throw new Error(`BRAND="${brandName}": no brands/${brandName}/brand.ts`);
+}
 
 const nextConfig: NextConfig = {
   // Build a fully static site (out/) for S3 + CloudFront. /api/* is routed to
@@ -8,6 +18,13 @@ const nextConfig: NextConfig = {
   output: "export",
   // Emit league/teams/index.html etc.; CloudFront maps directory URLs to index.html.
   trailingSlash: true,
+  turbopack: {
+    resolveAlias: { "@brand/*": `./brands/${brandName}/*` },
+  },
+  webpack: (config) => {
+    config.resolve.alias["@brand"] = brandDir;
+    return config;
+  },
   // `next dev` only: forward /api/* to the local API so the browser stays same-origin.
   ...(isDev && {
     // Otherwise /api/leagues is redirected to /api/leagues/ before the rewrite.

@@ -9,7 +9,7 @@ import { ErrorBanner, Loading } from "@/components/Status";
 import { api } from "@/lib/api";
 import { useLoader } from "@/lib/useLoader";
 
-const STORAGE_KEY = "pickleball:lastLeague";
+const STORAGE_KEY = "lastLeague";
 
 /** Default screen: the live board for the last-viewed (or newest) league. */
 export default function HomePage() {
