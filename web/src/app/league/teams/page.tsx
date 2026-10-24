@@ -5,10 +5,8 @@ import { LeagueShell } from "@/components/LeagueShell";
 import { ErrorBanner, Loading } from "@/components/Status";
 import { api } from "@/lib/api";
 import { useLoader } from "@/lib/useLoader";
+import { DUPR_ID_PATTERN, DUPR_ID_TITLE } from "@/lib/teams";
 import type { Team } from "@/lib/types";
-
-// Matches DUPR_ID_PATTERN in api/app/schemas.py.
-const DUPR_ID_PATTERN = "[A-Za-z0-9]{4,12}";
 
 export default function TeamsPage() {
   return <LeagueShell>{(league) => <TeamList leagueId={league.id} />}</LeagueShell>;
@@ -20,16 +18,23 @@ function TeamList({ leagueId }: { leagueId: number }) {
   if (error) return <ErrorBanner message={error} />;
   if (!teams) return <Loading />;
   return (
-    <div className="grid wide">
-      {teams.map((team) => (
-        <TeamCard key={team.id} team={team} onChange={reload} />
-      ))}
+    <div className="stack">
+      <p className="muted">
+        Teams were set up with the league. Names are optional: a team without one is shown by its
+        players&apos; names.
+      </p>
+      <div className="grid wide">
+        {teams.map((team) => (
+          <TeamCard key={team.id} team={team} onChange={reload} />
+        ))}
+      </div>
     </div>
   );
 }
 
 function TeamCard({ team, onChange }: { team: Team; onChange: () => void }) {
-  const [name, setName] = useState(team.name);
+  const [name, setName] = useState(team.name ?? "");
+  const nameChanged = name.trim() !== (team.name ?? "");
   const [error, setError] = useState<string | null>(null);
 
   async function run(fn: () => Promise<unknown>): Promise<boolean> {
@@ -46,21 +51,25 @@ function TeamCard({ team, onChange }: { team: Team; onChange: () => void }) {
 
   return (
     <div className="card">
+      <div className="card-head">
+        <h3>{team.display_name}</h3>
+        <span className="muted">Team {team.position}</span>
+      </div>
       <form
         className="inline-form"
         onSubmit={(e) => {
           e.preventDefault();
-          run(() => api.renameTeam(team.id, name));
+          run(() => api.renameTeam(team.id, name.trim()));
         }}
       >
         <input
-          aria-label="Team name"
-          className="team-name"
-          required
+          aria-label={`Team ${team.position} name (optional)`}
+          placeholder="Team name (optional)"
+          maxLength={120}
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
-        {name !== team.name && <button className="small">Rename</button>}
+        {nameChanged && <button className="small">{name.trim() ? "Save name" : "Clear name"}</button>}
       </form>
 
       <ErrorBanner message={error} />
@@ -137,7 +146,7 @@ function AddPlayerForm({
       <input
         placeholder="DUPR ID (optional)"
         pattern={DUPR_ID_PATTERN}
-        title="4–12 letters or digits, as shown on the player's DUPR profile"
+        title={DUPR_ID_TITLE}
         value={form.dupr_id}
         onChange={(e) => setForm({ ...form, dupr_id: e.target.value })}
       />

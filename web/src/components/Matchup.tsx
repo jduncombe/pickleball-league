@@ -5,9 +5,9 @@ export function Matchup({ match }: { match: Match }) {
   const aWon = done && (match.score_a ?? 0) > (match.score_b ?? 0);
   return (
     <span className="matchup">
-      <strong className={done && aWon ? "winner" : ""}>{match.team_a.name}</strong>
+      <strong className={done && aWon ? "winner" : ""}>{match.team_a.display_name}</strong>
       <span className="vs">{done ? `${match.score_a} – ${match.score_b}` : "vs"}</span>
-      <strong className={done && !aWon ? "winner" : ""}>{match.team_b.name}</strong>
+      <strong className={done && !aWon ? "winner" : ""}>{match.team_b.display_name}</strong>
     </span>
   );
 }

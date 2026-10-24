@@ -3,7 +3,7 @@ from sqlalchemy import select
 
 from .. import schemas
 from ..deps import DB, get_or_404
-from ..models import League, Match, MatchStatus, Team
+from ..models import League, Match, MatchStatus, Player, Team
 from ..scheduling import build_schedule
 
 router = APIRouter(prefix="/leagues", tags=["leagues"])
@@ -26,9 +26,21 @@ def list_leagues(db: DB):
 
 @router.post("", response_model=schemas.LeagueRead, status_code=201)
 def create_league(payload: schemas.LeagueCreate, db: DB):
-    """Create a league, its placeholder teams and a round-robin schedule."""
-    league = League(**payload.model_dump())
-    league.teams = [Team(name=f"Team {i}") for i in range(1, payload.num_teams + 1)]
+    """Create a league with its teams (and their players) and a round-robin schedule.
+
+    This is the only place teams are created; afterwards they can be renamed
+    and their players edited, but not added or removed.
+    """
+    league = League(**payload.model_dump(exclude={"teams"}))
+    setups = payload.teams or [schemas.TeamSetup() for _ in range(payload.num_teams)]
+    league.teams = [
+        Team(
+            position=position,
+            name=setup.name,
+            players=[Player(**p.model_dump()) for p in setup.players],
+        )
+        for position, setup in enumerate(setups, start=1)
+    ]
     db.add(league)
     db.flush()  # assign team ids before building the schedule
     db.add_all(_generate_matches(league))
@@ -163,5 +175,5 @@ def standings(league_id: int, db: DB):
         schemas.StandingRow(**row, point_diff=row["points_for"] - row["points_against"])
         for row in rows.values()
     ]
-    result.sort(key=lambda r: (-r.wins, -r.point_diff, -r.points_for, r.team.name))
+    result.sort(key=lambda r: (-r.wins, -r.point_diff, -r.points_for, r.team.display_name))
     return result

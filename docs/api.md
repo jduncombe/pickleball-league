@@ -14,7 +14,7 @@ Errors use FastAPI's format: `{"detail": "message"}` for 404/409, and
 | Method | Path | Description |
 | --- | --- | --- |
 | `GET` | `/leagues` | List leagues, newest first |
-| `POST` | `/leagues` | Create a league + placeholder teams + schedule |
+| `POST` | `/leagues` | Create a league with its teams (and players) + schedule |
 | `GET` | `/leagues/{id}` | Get a league |
 | `PATCH` | `/leagues/{id}` | Update `name`, `num_courts`, `current_week` |
 | `DELETE` | `/leagues/{id}` | Delete a league and everything in it |
@@ -30,12 +30,22 @@ Create a league:
 POST /leagues
 {
   "name": "Tuesday Night Doubles",
-  "num_teams": 8,          // 2–64
+  "num_teams": 3,          // 2–64
   "num_weeks": 8,          // 1–52
   "rounds_per_week": 3,    // 1–20
-  "num_courts": 4          // 1–50
+  "num_courts": 4,         // 1–50
+  "teams": [               // optional; if given, exactly num_teams entries, in order
+    { "name": "Dink Dynasty",
+      "players": [{ "name": "Alex" }, { "name": "Sam", "dupr_id": "4KX92L" }] },
+    { "players": [{ "name": "Jo" }, { "name": "Kim" }] },   // no name -> "Jo & Kim"
+    {}                                                     // -> "Team 3"
+  ]
 }
 ```
+
+Teams are only created here, once. Afterwards they can be renamed (or have
+their name cleared) and their players edited, but teams can't be added or
+removed. Omitting `teams` creates `num_teams` unnamed teams with no players.
 
 Dashboard response:
 
@@ -57,7 +67,7 @@ Dashboard response:
 | Method | Path | Description |
 | --- | --- | --- |
 | `GET` | `/teams/{id}` | Team with players |
-| `PATCH` | `/teams/{id}` | Rename: `{"name": "Dink Dynasty"}` |
+| `PATCH` | `/teams/{id}` | Set the name: `{"name": "Dink Dynasty"}`; `null` or `""` clears it |
 | `POST` | `/teams/{id}/players` | Add a player |
 | `PATCH` | `/players/{id}` | Update a player |
 | `DELETE` | `/players/{id}` | Remove a player |
@@ -67,6 +77,12 @@ Player payload:
 ```json
 { "name": "Sam Rivera", "email": "sam@example.com", "dupr_id": "4KX92L" }
 ```
+
+Team objects (and the `team_a`/`team_b`/`team` references in matches and
+standings) carry both `name` (optional, may be `null`) and **`display_name`**,
+which clients should show: the name if set, otherwise the players' names
+(`"Alex & Sam"`, or `"Ann, Bo & Cy"` for three), otherwise `"Team <position>"`.
+Full team objects also have `position` (1-based setup order).
 
 `email` and `dupr_id` are optional; blank strings are stored as `null`.
 `dupr_id` must be 4–12 letters/digits and is upper-cased. `dupr_rating` is
@@ -88,8 +104,8 @@ Match object:
   "id": 12, "league_id": 1, "week": 2, "round": 1,
   "status": "in_progress",
   "court": 3,
-  "team_a": { "id": 1, "name": "Dink Dynasty" },
-  "team_b": { "id": 4, "name": "Kitchen Crew" },
+  "team_a": { "id": 1, "name": "Dink Dynasty", "display_name": "Dink Dynasty" },
+  "team_b": { "id": 4, "name": null, "display_name": "Jo & Kim" },
   "score_a": null, "score_b": null,
   "started_at": "2026-09-30T18:05:00Z", "completed_at": null
 }

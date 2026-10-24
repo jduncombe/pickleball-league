@@ -32,7 +32,7 @@ class League(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
     teams: Mapped[list["Team"]] = relationship(
-        back_populates="league", cascade="all, delete-orphan", order_by="Team.id"
+        back_populates="league", cascade="all, delete-orphan", order_by="Team.position"
     )
     matches: Mapped[list["Match"]] = relationship(
         back_populates="league", cascade="all, delete-orphan"
@@ -44,12 +44,27 @@ class Team(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     league_id: Mapped[int] = mapped_column(ForeignKey("leagues.id", ondelete="CASCADE"))
-    name: Mapped[str] = mapped_column(String(120))
+    # 1-based order within the league, fixed at setup.
+    position: Mapped[int] = mapped_column(Integer)
+    # Optional; see display_name.
+    name: Mapped[str | None] = mapped_column(String(120), nullable=True)
 
     league: Mapped[League] = relationship(back_populates="teams")
     players: Mapped[list["Player"]] = relationship(
         back_populates="team", cascade="all, delete-orphan", order_by="Player.id"
     )
+
+    @property
+    def display_name(self) -> str:
+        """The team name, else its players' names ("Alex & Sam"), else "Team N"."""
+        if self.name:
+            return self.name
+        names = [p.name for p in self.players]
+        if not names:
+            return f"Team {self.position}"
+        if len(names) == 1:
+            return names[0]
+        return f"{', '.join(names[:-1])} & {names[-1]}"
 
 
 class Player(Base):

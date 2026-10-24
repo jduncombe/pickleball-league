@@ -19,6 +19,14 @@ export interface LeagueCreate {
   num_weeks: number;
   rounds_per_week: number;
   num_courts: number;
+  /** One entry per team, in order. Teams are only created here, at setup. */
+  teams?: TeamSetup[];
+}
+
+export interface TeamSetup {
+  /** Optional; unnamed teams are shown by their players' names. */
+  name?: string | null;
+  players: PlayerInput[];
 }
 
 export interface Player {
@@ -38,11 +46,14 @@ export interface PlayerInput {
 
 export interface TeamRef {
   id: number;
-  name: string;
+  name: string | null;
+  /** name, else the players' names ("Alex & Sam"), else "Team N". Use this for display. */
+  display_name: string;
 }
 
 export interface Team extends TeamRef {
   league_id: number;
+  position: number;
   players: Player[];
 }
 

@@ -10,9 +10,18 @@
 | **Court** | A physical court. Courts limit how many matches run *simultaneously*; they don't change the schedule. |
 | **Match** | Team A vs Team B in a given week and round. Status: `scheduled` → `in_progress` (on a court) → `completed` (score recorded). |
 
-Creating a league creates `num_teams` placeholder teams ("Team 1", "Team 2", …)
-to be renamed on the Teams screen, and generates the full season schedule
-immediately.
+Teams are created **once, at league setup**: the setup form takes each team's
+optional name and its players (with optional email and DUPR ID). The league's
+full season schedule is generated immediately from those teams. Afterwards a
+team can be renamed, have its name cleared, or have its players corrected, but
+teams can't be added or removed, because the schedule depends on them.
+
+**Team names are optional.** Everywhere a team is shown, the app uses its
+display name:
+
+1. the team name, if it has one;
+2. otherwise its players' names: "Alex & Sam", or "Ann, Bo & Cy" for three;
+3. otherwise "Team N", where N is its position in the setup form.
 
 ## Schedule generation
 

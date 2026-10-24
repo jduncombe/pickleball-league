@@ -14,6 +14,7 @@ def get_team(team_id: int, db: DB):
 
 @router.patch("/teams/{team_id}", response_model=schemas.TeamRead)
 def rename_team(team_id: int, payload: schemas.TeamUpdate, db: DB):
+    """Set or clear (null/blank) a team's name. Teams themselves are created with the league."""
     team = get_or_404(db, Team, team_id)
     team.name = payload.name
     db.commit()

@@ -28,7 +28,7 @@ export function ScoreForm({ match, onSaved }: { match: Match; onSaved: () => voi
   return (
     <form className="score-form" onSubmit={submit}>
       <input
-        aria-label={`${match.team_a.name} score`}
+        aria-label={`${match.team_a.display_name} score`}
         type="number"
         min={0}
         max={99}
@@ -38,7 +38,7 @@ export function ScoreForm({ match, onSaved }: { match: Match; onSaved: () => voi
       />
       <span>–</span>
       <input
-        aria-label={`${match.team_b.name} score`}
+        aria-label={`${match.team_b.display_name} score`}
         type="number"
         min={0}
         max={99}

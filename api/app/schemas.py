@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from .models import MatchStatus
 
@@ -20,6 +20,15 @@ class LeagueCreate(BaseModel):
     num_weeks: int = Field(ge=1, le=52)
     rounds_per_week: int = Field(ge=1, le=20)
     num_courts: int = Field(ge=1, le=50)
+    # Teams are created once, here, in this order. If omitted, num_teams
+    # unnamed teams without players are created (shown as "Team 1", ...).
+    teams: list["TeamSetup"] | None = None
+
+    @model_validator(mode="after")
+    def teams_match_count(self):
+        if self.teams is not None and len(self.teams) != self.num_teams:
+            raise ValueError(f"expected {self.num_teams} teams, got {len(self.teams)}")
+        return self
 
 
 class LeagueUpdate(BaseModel):
@@ -89,20 +98,34 @@ class PlayerRead(ORMModel):
 # --- Teams -------------------------------------------------------------------
 
 
-class TeamUpdate(BaseModel):
-    name: str = Field(min_length=1, max_length=120)
+class TeamName(BaseModel):
+    # Optional: blank means "no name", and the team is shown by its players' names.
+    name: str | None = Field(default=None, max_length=120)
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def clean_name(cls, value):
+        return _clean_optional(value)
 
 
-class TeamRead(ORMModel):
-    id: int
-    league_id: int
-    name: str
-    players: list[PlayerRead] = []
+class TeamSetup(TeamName):
+    players: list[PlayerCreate] = Field(default_factory=list, max_length=20)
+
+
+class TeamUpdate(TeamName):
+    pass
 
 
 class TeamRef(ORMModel):
     id: int
-    name: str
+    name: str | None
+    display_name: str
+
+
+class TeamRead(TeamRef):
+    league_id: int
+    position: int
+    players: list[PlayerRead] = []
 
 
 # --- Matches -----------------------------------------------------------------
@@ -163,3 +186,6 @@ class StandingRow(BaseModel):
     points_for: int
     points_against: int
     point_diff: int
+
+
+LeagueCreate.model_rebuild()
