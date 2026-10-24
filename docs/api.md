@@ -52,10 +52,18 @@ back into setup, pausing play until it is finalised again. See
 | Method | Path | Description |
 | --- | --- | --- |
 | `POST` | `/leagues` | Step 1 for a new league: basics. Creates the league in setup with `num_teams` empty teams. |
-| `PUT` | `/leagues/{id}/setup` | Step 1 again: replace the basics. Adds or removes teams at the end to match `num_teams`. 409 if not in setup, or if changing `num_teams`/`num_weeks`/`rounds_per_week` after matches have been played. |
+| `PUT` | `/leagues/{id}/setup` | Step 1 again: replace the basics. Adds or removes teams at the end to match `num_teams`. 409 if not in setup, or if changing `num_teams`/`num_weeks`/`matches_per_week`/`points_to_win` after matches have been played. |
 | `PUT` | `/leagues/{id}/teams` | Step 2: names and players for every team (exactly `num_teams` entries, in order). Replaces players. 409 if not in setup. Drafts may be incomplete. |
 | `POST` | `/leagues/{id}/finalize` | **Create the league.** 422 listing problems if a team has no players, or has no name when `use_team_names` is on. Builds the schedule if there isn't one, sets `status: "active"`. |
 | `POST` | `/leagues/{id}/edit` | **Edit setup.** Back to `status: "setup"`. 409 while a match is on court. |
+| `GET` | `/schedule-preview?num_teams=&num_weeks=&matches_per_week=` | What a schedule with these basics would look like, for the setup summary (no league needed). |
+
+Preview response, for 9 teams, 8 weeks, 4 matches per week:
+
+```json
+{ "rounds_per_week": 5, "games_per_week": 18, "has_catch_up_round": true,
+  "teams_short_per_week": 0, "min_meetings": 4, "max_meetings": 4 }
+```
 
 Basics (step 1):
 
@@ -64,14 +72,16 @@ Basics (step 1):
   "name": "Tuesday Night Doubles",
   "num_teams": 8,
   "num_weeks": 8,
-  "rounds_per_week": 3,
+  "matches_per_week": 3,
   "num_courts": 4,
   "points_to_win": 15,
   "use_team_names": false
 }
 ```
 
-Limits: teams 2–64, weeks 1–52, rounds per week 1–20, courts 1–50.
+Limits: teams 2–64, weeks 1–52, courts 1–50. `matches_per_week` (matches
+each team plays per week) is 1–20 and at most `num_teams - 1`; rounds per week
+follow from it (see [league-model.md](league-model.md#schedule-generation)).
 `points_to_win` is 11, 15 or 21 (default 11); like the number of teams, weeks
 and rounds, it can't change once a match has been played.
 

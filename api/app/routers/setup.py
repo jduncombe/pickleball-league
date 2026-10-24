@@ -3,24 +3,25 @@
 A league starts in setup. "Create the league" (finalize) validates the setup,
 builds the schedule and makes the league active; teams and players are then
 fixed. "Edit setup" (edit) puts an active league back into setup. Once any
-match has been played, the season's shape (number of teams, weeks, rounds per
-week) and the points to win can no longer change, since that would invalidate
+match has been played, the season's shape (number of teams, weeks, matches
+per week) and the points to win can no longer change, since that would invalidate
 results; names, players and courts can.
 """
 
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 
 from .. import schemas
 from ..deps import DB, get_or_404
 from ..models import League, LeagueStatus, Match, MatchStatus, Player, Team
-from ..scheduling import build_schedule
+from ..scheduling import build_schedule, summarize
 
 router = APIRouter(prefix="/leagues", tags=["league setup"])
+preview_router = APIRouter(tags=["league setup"])
 
 # Changing any of these means a different schedule.
-SCHEDULE_FIELDS = ("num_teams", "num_weeks", "rounds_per_week")
+SCHEDULE_FIELDS = ("num_teams", "num_weeks", "matches_per_week")
 # Fixed once a match has been played: the schedule, and the scoring rules
 # that existing results were validated against.
 LOCKED_AFTER_PLAY = (*SCHEDULE_FIELDS, "points_to_win")
@@ -44,8 +45,29 @@ def _generate_matches(league: League) -> list[Match]:
     team_ids = [team.id for team in league.teams]
     return [
         Match(league_id=league.id, week=week, round=rnd, team_a_id=a, team_b_id=b)
-        for week, rnd, (a, b) in build_schedule(team_ids, league.num_weeks, league.rounds_per_week)
+        for week, rnd, (a, b) in build_schedule(team_ids, league.num_weeks, league.matches_per_week)
     ]
+
+
+@preview_router.get("/schedule-preview", response_model=schemas.SchedulePreview)
+def schedule_preview(
+    num_teams: int = Query(ge=2, le=64),
+    num_weeks: int = Query(ge=1, le=52),
+    matches_per_week: int = Query(ge=1, le=20),
+):
+    """Shape of the schedule these setup basics would produce, for the setup summary."""
+    if matches_per_week > num_teams - 1:
+        raise HTTPException(422, f"At most {num_teams - 1} matches per week with {num_teams} teams")
+    teams = list(range(1, num_teams + 1))
+    summary = summarize(build_schedule(teams, num_weeks, matches_per_week), teams, num_weeks, matches_per_week)
+    return schemas.SchedulePreview(
+        rounds_per_week=max(summary.rounds_per_week),
+        games_per_week=max(summary.games_per_week),
+        has_catch_up_round=num_teams % 2 == 1 and matches_per_week > 1,
+        teams_short_per_week=(num_teams * matches_per_week) % 2,
+        min_meetings=summary.min_meetings,
+        max_meetings=summary.max_meetings,
+    )
 
 
 @router.post("", response_model=schemas.LeagueRead, status_code=201)

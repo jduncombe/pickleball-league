@@ -29,7 +29,7 @@ export default function LeaguesPage() {
               <th>Name</th>
               <th>Teams</th>
               <th>Weeks</th>
-              <th>Rounds / week</th>
+              <th>Matches / week</th>
               <th>Courts</th>
               <th>Current week</th>
               <th>Status</th>
@@ -43,7 +43,7 @@ export default function LeaguesPage() {
                 </td>
                 <td>{l.num_teams}</td>
                 <td>{l.num_weeks}</td>
-                <td>{l.rounds_per_week}</td>
+                <td>{l.matches_per_week}</td>
                 <td>{l.num_courts}</td>
                 <td>{l.current_week}</td>
                 <td>

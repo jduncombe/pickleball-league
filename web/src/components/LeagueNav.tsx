@@ -7,7 +7,7 @@ import { api } from "@/lib/api";
 import { type LeaguePath, leagueHref, setupHref } from "@/lib/routes";
 import type { League } from "@/lib/types";
 
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+const plural = (n: number, word: string, many = `${word}s`) => `${n} ${n === 1 ? word : many}`;
 
 export function LeagueNav({ league }: { league: League }) {
   const pathname = usePathname();
@@ -27,8 +27,8 @@ export function LeagueNav({ league }: { league: League }) {
           {league.name} {inSetup && <span className="badge">in setup</span>}
         </h1>
         <p className="muted">
-          {league.num_teams} teams · {plural(league.num_weeks, "week")} · {league.rounds_per_week}{" "}
-          {league.rounds_per_week === 1 ? "round" : "rounds"}/week · {plural(league.num_courts, "court")} ·
+          {league.num_teams} teams · {plural(league.num_weeks, "week")} ·{" "}
+          {plural(league.matches_per_week, "match", "matches")}/week · {plural(league.num_courts, "court")} ·
           games to {league.points_to_win}
         </p>
       </div>

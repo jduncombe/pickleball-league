@@ -60,7 +60,7 @@ npm run dev                             # http://localhost:3000 (/api/* forwarde
 | Screen | Route | What it does |
 | --- | --- | --- |
 | **Live dashboard** (default) | `/` and `/league/?id=…` | Teams on court right now, with a per-court scoreboard for entering scores, and this week's match-ups that can start because neither team is playing. Matches from the earliest round are highlighted as the suggested next games, and teams whose players all have DUPR IDs are shown in a different colour. Start a match on a free court, enter its score, or return it to the schedule. |
-| League setup, step 1 | `/leagues/new`, then `/league/setup/?id=…&step=basics` | Name, number of teams, weeks, rounds per week, courts, **points to win** (11, 15 or 21; win by 2) and **whether to use team names**. |
+| League setup, step 1 | `/leagues/new`, then `/league/setup/?id=…&step=basics` | Name, number of teams, weeks, **matches per week** (per team; rounds are worked out, with a catch-up round for odd team counts), courts, **points to win** (11, 15 or 21; win by 2) and **whether to use team names**. |
 | League setup, step 2 | `/league/setup/?id=…&step=players` | Each team's players (optional **DUPR ID** and email), plus team names if enabled. Save a draft, or **Create the league**, which builds the schedule and fixes teams and players. **Edit setup** (in the league header) reopens both steps later. |
 | Teams & players | `/league/teams/?id=…` | Read-only list of teams and players. Teams without names are shown by their players' names. |
 | Schedule & results | `/league/matches/?id=…` | Week-by-week schedule grouped by round (with each round's bye when there's an odd number of teams), score entry/correction, **Verify** to lock a result, standings. |

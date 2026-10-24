@@ -4,9 +4,9 @@
 
 | Concept | Meaning |
 | --- | --- |
-| **League** | A season with a fixed set of teams. Configured with number of teams, weeks, rounds per week, and courts. |
+| **League** | A season with a fixed set of teams. Configured with number of teams, weeks, matches per week (per team), courts and points to win. |
 | **Week** | One league session (e.g. "Tuesday night"). The league tracks a `current_week`, which the dashboard shows by default. |
-| **Round** | A slot within a week in which every team plays **at most one** match. With an odd number of teams, one team sits out (a bye) each round. |
+| **Round** | A slot within a week in which every team plays **at most one** match. With an odd number of teams, one team sits out (a bye) each round, and the week ends with a catch-up round for those teams. |
 | **Court** | A physical court. Courts limit how many matches run *simultaneously*; they don't change the schedule. |
 | **Match** | Team A vs Team B in a given week and round. Status: `scheduled` → `in_progress` (on a court) → `completed` (score recorded). |
 
@@ -22,7 +22,7 @@ A league moves between two phases:
 
 **Setup** is two steps:
 
-1. **League basics:** name, number of teams, weeks, rounds per week, courts,
+1. **League basics:** name, number of teams, weeks, matches per week, courts,
    and whether the league **uses team names**.
 2. **Teams & players:** each team's players (name, optional DUPR ID and
    email), plus a name for each team if the league uses team names. Drafts
@@ -38,7 +38,7 @@ it is finalised again ("Save & resume league"), and it can't be entered while
 a match is on court.
 
 - **Before any match has been played,** everything can change. Changing the
-  number of teams, weeks or rounds per week discards the schedule, which is
+  number of teams, weeks or matches per week discards the schedule, which is
   rebuilt when the league is created again.
 - **Once a match has been played,** those three are locked, because changing
   them would invalidate results. The league name, courts, team names, players
@@ -57,26 +57,53 @@ restores them.
 
 ## Schedule generation
 
-`api/app/scheduling.py` uses the **circle method** round robin:
+A league sets **matches per week**: how many matches each team plays each week
+(at most one fewer than the number of teams, i.e. one against each opponent).
+Rounds follow from that. `api/app/scheduling.py` aims for, in order:
 
-1. One cycle has `n − 1` rounds for `n` teams (`n` rounds if `n` is odd, using a
-   bye). Every pair of teams meets exactly once per cycle, and each team plays
-   at most once per round.
-2. The season has `num_weeks × rounds_per_week` round slots. Slots are filled
-   from the cycle in order; if the season is longer than one cycle, the cycle
-   repeats (so teams meet more than once).
-3. Team A/B order alternates each round, so no team is always listed first.
+1. Every team plays its matches per week, at most one per round. If
+   teams × matches is odd, that's impossible for everyone, so one team per
+   week plays a match fewer, rotating between teams.
+2. No team plays the same opponent twice in a week.
+3. Over the season, every pair of teams meets a similar number of times.
 
-Example: 8 teams, 3 rounds/week, 8 weeks → 24 slots, cycle of 7 rounds, 4
-matches per round, 96 matches total; each pairing is played 3–4 times.
+**Even number of teams:** a week is *matches per week* rounds in which every
+team plays, each round pairing the teams that have met least so far.
 
-With an odd number of teams, a different team sits out each round. The
-Schedule & results screen shows it on the round card ("Bye: …"). Byes aren't
-stored; a round's bye is simply whichever team has no match in it.
+**Odd number of teams:** one team sits out (has a bye) in each regular round,
+so a week is *matches per week* regular rounds, each with a **different**
+team sitting out, then a **catch-up round** in which those teams play each
+other. The sitters and their catch-up pairings are chosen at the start of the
+week: byes go to the teams that have had fewest, and the catch-up pairs are
+the least-met ones. Those pairs are kept apart in the regular rounds, so
+nobody meets twice in the week.
+
+Example: 9 teams, 4 matches per week:
+
+| Round | Games | Sitting out |
+| --- | --- | --- |
+| 1–4 | 4 each | a different team each round (A, B, C, D) |
+| 5 (catch-up) | 2 | A, B, C, D play each other (e.g. A–B, C–D) |
+
+That's 18 games, and every team plays 4. Over 8 weeks, every pair of teams
+meets exactly 4 times.
+
+Each week is built a few times with different (seeded, so repeatable)
+tie-breaks, and the result that keeps season-long meeting counts most even
+is kept. Across a wide range of league sizes (2–20 teams, 1–8 matches per
+week, 1–16 weeks), the meeting counts are as even as the numbers allow in
+about 93% of cases and otherwise within 2. Generation takes well under a
+second. The setup screen shows a preview of the result (rounds and games
+per week, how often pairs meet) from `GET /schedule-preview`.
+
+The Schedule & results screen shows each round's bye ("Bye: …") and marks
+the catch-up round. Byes aren't stored; a round's bye is simply whichever
+team has no match in it.
 
 The schedule is built when the league is created. It is rebuilt only if
-setup is edited to change the number of teams, weeks or rounds, which is
-possible only before any match has been played (see [Setup](#setup)).
+setup is edited to change the number of teams, weeks or matches per week,
+which is possible only before any match has been played (see
+[Setup](#setup)).
 
 ## Courts and the live dashboard
 

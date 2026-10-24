@@ -88,18 +88,27 @@ function RoundCard({
   pointsToWin: number;
   onSaved: () => void;
 }) {
-  // With an odd number of teams, whoever has no match this round has a bye.
+  // With an odd number of teams, whoever has no match this round has a bye,
+  // except in the week's catch-up round (fewer games than a full round),
+  // where the teams that had byes play each other.
   const playing = new Set(matches.flatMap((m) => [m.team_a.id, m.team_b.id]));
   const byes = (teams ?? []).filter((t) => !playing.has(t.id));
+  const catchUp = teams !== null && teams.length % 2 === 1 && matches.length < Math.floor(teams.length / 2);
 
   return (
     <div className="card">
       <div className="card-head">
-        <h3>Round {round}</h3>
-        {byes.length > 0 && (
-          <p className="byes muted">
-            Bye: <strong>{byes.map((t) => t.display_name).join(", ")}</strong>
-          </p>
+        <h3>
+          Round {round} {catchUp && <span className="badge">Catch-up round</span>}
+        </h3>
+        {catchUp ? (
+          <p className="byes muted">Teams that had a bye this week play each other</p>
+        ) : (
+          byes.length > 0 && (
+            <p className="byes muted">
+              Bye: <strong>{byes.map((t) => t.display_name).join(", ")}</strong>
+            </p>
+          )
         )}
       </div>
       <ul className="match-list">
