@@ -42,7 +42,7 @@ See [deployment.md](deployment.md) for the AWS details.
 
 ### `api/` — FastAPI
 
-- `models.py` — SQLAlchemy 2.0 ORM models (`League`, `Team`, `Player`, `Match`).
+- `models.py` — SQLAlchemy 2.0 ORM models (`League`, `Team`, `Player`, `Match`, and `CourtClaim` for the scoring app).
 - `schemas.py` — Pydantic models for validation and responses.
 - `scheduling.py` — pure functions that build the round-robin schedule; no DB
   access, easy to unit test.
