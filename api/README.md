@@ -8,6 +8,7 @@ endpoint reference.
 pip install -r requirements-dev.txt
 uvicorn app.main:app --reload     # http://localhost:8000/docs
 pytest
+ruff check . && ruff format --check .   # lint & format (ruff format . to fix)
 ```
 
 Run the tests against Postgres instead of in-memory SQLite:

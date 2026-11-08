@@ -8,7 +8,14 @@ import { ErrorBanner } from "../Status";
 
 type NumberField = "num_teams" | "num_weeks" | "matches_per_week" | "num_courts";
 
-const FIELDS: { key: NumberField; label: string; min: number; max: number; help: string; schedule: boolean }[] = [
+const FIELDS: {
+  key: NumberField;
+  label: string;
+  min: number;
+  max: number;
+  help: string;
+  schedule: boolean;
+}[] = [
   {
     key: "num_teams",
     label: `Number of ${term("team", 2)}`,
@@ -50,24 +57,25 @@ const FIXED = `Fixed: ${term("match", 2)} have been played.`;
 
 /** The schedule these settings would produce, from the API (debounced). */
 function useSchedulePreview(form: LeagueBasics): SchedulePreview | null {
-  const [preview, setPreview] = useState<SchedulePreview | null>(null);
+  // Keyed by the settings it was fetched for, so a stale one is never shown.
+  const [preview, setPreview] = useState<{ key: string; value: SchedulePreview } | null>(null);
   const { num_teams, num_weeks, matches_per_week } = form;
+  const key = `${num_teams}/${num_weeks}/${matches_per_week}`;
   useEffect(() => {
-    setPreview(null);
     if (!(num_teams >= 2 && num_weeks >= 1 && matches_per_week >= 1 && matches_per_week < num_teams)) return;
     let current = true;
     const timer = setTimeout(() => {
       api
         .schedulePreview({ num_teams, num_weeks, matches_per_week })
-        .then((p) => current && setPreview(p))
+        .then((value) => current && setPreview({ key, value }))
         .catch(() => {}); // summary just stays without the preview details
     }, 300);
     return () => {
       current = false;
       clearTimeout(timer);
     };
-  }, [num_teams, num_weeks, matches_per_week]);
-  return preview;
+  }, [key, num_teams, num_weeks, matches_per_week]);
+  return preview?.key === key ? preview.value : null;
 }
 
 export const DEFAULT_BASICS: LeagueBasics = {
@@ -172,7 +180,9 @@ export function BasicsForm({
           ))}
         </select>
         <small className="muted">
-          {lockedAfterPlay ? FIXED : `${Term("game", 2)} are first to ${n}, win by 2 (e.g. ${exampleScores}).`}
+          {lockedAfterPlay
+            ? FIXED
+            : `${Term("game", 2)} are first to ${n}, win by 2 (e.g. ${exampleScores}).`}
         </small>
       </label>
 
@@ -197,20 +207,21 @@ export function BasicsForm({
           Each {term("team")} plays {count(form.matches_per_week, "match")} a {term("week")}
           {preview &&
             ` over ${count(preview.rounds_per_week, "round")} (${count(preview.games_per_week, "match")} per ${term("week")} in total, ${preview.games_per_week * form.num_weeks} in the ${term("season")})`}
-          . Up to {count(gamesPerRound, "match")} per {term("round")}, played in {plural(wavesPerRound, "wave")} on{" "}
-          {count(form.num_courts, "court")}.
+          . Up to {count(gamesPerRound, "match")} per {term("round")}, played in{" "}
+          {plural(wavesPerRound, "wave")} on {count(form.num_courts, "court")}.
         </p>
         {preview?.has_catch_up_round && (
           <p>
-            With an odd number of {term("team", 2)}, one {term("team")} has {a("bye")} in each {term("round")}; the
-            last {term("round")} of the {term("week")} is {a("catchUpRound")} where those {term("team", 2)} play each
-            other.
+            With an odd number of {term("team", 2)}, one {term("team")} has {a("bye")} in each {term("round")}
+            ; the last {term("round")} of the {term("week")} is {a("catchUpRound")} where those{" "}
+            {term("team", 2)} play each other.
           </p>
         )}
         {preview?.teams_short_per_week ? (
           <p>
             {count(form.num_teams, "team")} × {count(form.matches_per_week, "match")} is odd, so each{" "}
-            {term("week")} one {term("team")} plays one {term("match")} fewer (rotating between {term("team", 2)}).
+            {term("week")} one {term("team")} plays one {term("match")} fewer (rotating between{" "}
+            {term("team", 2)}).
           </p>
         ) : null}
         {preview && form.num_teams > 2 && (

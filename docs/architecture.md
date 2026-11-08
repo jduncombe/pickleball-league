@@ -77,7 +77,11 @@ hides the difference; the API test suite runs against both in CI.
 `.github/workflows/ci.yml` runs on every pull request (and before every deploy):
 
 - API: `cd api && pytest` against in-memory SQLite and a Postgres service container.
-- Web: `cd web && npm run lint` (type check) and `npm run build` (static export).
+- Lint & format: Ruff for the API (`ruff check`, `ruff format --check`; settings
+  in `api/pyproject.toml`), ESLint (`eslint-config-next`) and Prettier for
+  the web app (`npm run lint`, `npm run format:check`). Markdown is left out of
+  Prettier.
+- Web: `cd web && npm run typecheck` and `npm run build` (static export).
 - Docker: `docker compose build`.
 - Terraform: `fmt -check`, `validate` for both stacks, `terraform test` for the
   app stack (mocked AWS provider, no credentials), and unit tests for the

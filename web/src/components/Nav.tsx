@@ -15,6 +15,7 @@ function Logo({
   const height = brand.logoHeight ?? 28;
   const width = Math.round((image.width / image.height) * height);
   // Plain <img>: the static export has no image optimiser.
+  // eslint-disable-next-line @next/next/no-img-element
   const img = <img className={className} src={image.src} alt="" width={width} height={height} />;
   if (!dark) return img;
   return (

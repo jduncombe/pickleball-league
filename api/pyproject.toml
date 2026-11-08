@@ -1,0 +1,17 @@
+# Tool settings for the API. Dependencies stay in requirements*.txt.
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+
+[tool.ruff.lint]
+# pycodestyle, pyflakes, isort, pyupgrade, bugbear, simplify
+select = ["E", "W", "F", "I", "UP", "B", "SIM"]
+ignore = [
+  "UP042", # StrEnum changes str() of the enums, which would change stored/serialised values
+  "UP047", # PEP 695 generics: keep the code importable on Python 3.11
+]
+
+[tool.ruff.lint.per-file-ignores]
+# conftest sets DATABASE_URL before importing the app.
+"tests/conftest.py" = ["E402"]

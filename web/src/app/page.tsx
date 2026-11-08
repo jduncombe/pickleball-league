@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { LeagueDashboard } from "@/components/LeagueDashboard";
 import { LeagueNav } from "@/components/LeagueNav";
 import { SetupBanner } from "@/components/SetupBanner";
@@ -12,22 +12,18 @@ import { useLoader } from "@/lib/useLoader";
 
 const STORAGE_KEY = "lastLeague";
 
+function rememberedLeague(): number | null {
+  try {
+    return Number(localStorage.getItem(STORAGE_KEY)) || null;
+  } catch {
+    return null; // storage unavailable (private mode, or prerendering)
+  }
+}
+
 /** Default screen: the live board for the last-viewed (or newest) league. */
 export default function HomePage() {
   const { data: leagues, error } = useLoader(() => api.listLeagues());
-  const [selected, setSelected] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (!leagues?.length) return;
-    let remembered: number | null = null;
-    try {
-      remembered = Number(localStorage.getItem(STORAGE_KEY)) || null;
-    } catch {
-      // storage unavailable (private mode etc.)
-    }
-    const valid = leagues.some((l) => l.id === remembered);
-    setSelected(valid ? remembered : leagues[0].id);
-  }, [leagues]);
+  const [selected, setSelected] = useState<number | null>(rememberedLeague);
 
   function choose(id: number) {
     setSelected(id);
@@ -53,8 +49,8 @@ export default function HomePage() {
     );
   }
 
-  const league = leagues.find((l) => l.id === selected);
-  if (!league) return <Loading />;
+  // The chosen league if it still exists, else the newest.
+  const league = leagues.find((l) => l.id === selected) ?? leagues[0];
 
   return (
     <>
