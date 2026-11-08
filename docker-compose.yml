@@ -7,6 +7,8 @@ services:
       APP_NAME: ${APP_NAME:-Pickleball League}
       # The brand's terminology table, so API messages use the same words as the UI.
       TERMS_FILE: /brands/${BRAND:-default}/terms.json
+      # Token for the /scoring endpoints; empty means the built-in temporary one.
+      SCORING_API_TOKEN: ${SCORING_API_TOKEN:-}
     volumes:
       - api-data:/data
       - ./web/brands:/brands:ro

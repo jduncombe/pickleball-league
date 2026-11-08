@@ -42,7 +42,7 @@ See [deployment.md](deployment.md) for the AWS details.
 
 ### `api/` — FastAPI
 
-- `models.py` — SQLAlchemy 2.0 ORM models (`League`, `Team`, `Player`, `Match`).
+- `models.py` — SQLAlchemy 2.0 ORM models (`League`, `Team`, `Player`, `Match`, and `CourtClaim` for the scoring app).
 - `schemas.py` — Pydantic models for validation and responses.
 - `scheduling.py` — pure functions that build the round-robin schedule; no DB
   access, easy to unit test.
@@ -68,6 +68,7 @@ hides the difference; the API test suite runs against both in CI.
 | `NEXT_PUBLIC_API_URL` | web (build time) | `/api` | Base URL the browser uses for API calls |
 | `BRAND` | web (build time) | `default` | White-label brand folder in `web/brands/` ([white-labelling.md](white-labelling.md)) |
 | `APP_NAME` | api | `Pickleball League` | Product name in the API docs title |
+| `SCORING_API_TOKEN` | api | a temporary token committed in `config.py` | Bearer token for the scoring-app endpoints ([api.md](api.md#scoring-app)). Set your own anywhere the API is reachable by others. |
 | `TERMS_FILE` / `TERMS_JSON` | api | default terms | The brand's terminology table (a path to its `terms.json`, or the JSON itself) for API messages ([white-labelling.md](white-labelling.md)) |
 | `TEST_DATABASE_URL` | api tests | in-memory SQLite | Run the tests against another database (CI uses Postgres) |
 
@@ -76,7 +77,11 @@ hides the difference; the API test suite runs against both in CI.
 `.github/workflows/ci.yml` runs on every pull request (and before every deploy):
 
 - API: `cd api && pytest` against in-memory SQLite and a Postgres service container.
-- Web: `cd web && npm run lint` (type check) and `npm run build` (static export).
+- Lint & format: Ruff for the API (`ruff check`, `ruff format --check`; settings
+  in `api/pyproject.toml`), ESLint (`eslint-config-next`) and Prettier for
+  the web app (`npm run lint`, `npm run format:check`). Markdown is left out of
+  Prettier.
+- Web: `cd web && npm run typecheck` and `npm run build` (static export).
 - Docker: `docker compose build`.
 - Terraform: `fmt -check`, `validate` for both stacks, `terraform test` for the
   app stack (mocked AWS provider, no credentials), and unit tests for the
@@ -87,7 +92,9 @@ hides the difference; the API test suite runs against both in CI.
 This is a skeleton. Likely next steps, roughly in priority order:
 
 1. **Authentication & roles** — organiser vs. read-only viewer, e.g. Amazon
-   Cognito with tokens verified by the API.
+   Cognito with tokens verified by the API. Until then, only the scoring-app
+   endpoints (`/scoring/*`) are protected, by one shared, temporary token
+   (`SCORING_API_TOKEN`, see [api.md](api.md#scoring-app)).
 2. **Migrations** — replace `create_all` with Alembic before the schema changes
    (and before running more than one API task, which would race on first start).
 3. **Scheduling options** — balance courts across teams, respect team

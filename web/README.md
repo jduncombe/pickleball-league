@@ -8,7 +8,9 @@ Next.js (App Router) interface for the league API, built as a static export
 npm install
 cp .env.example .env.local   # API_URL=http://localhost:8000
 npm run dev                  # http://localhost:3000, /api/* forwarded to API_URL
-npm run lint                 # type check
+npm run lint                 # ESLint
+npm run typecheck            # TypeScript
+npm run format               # Prettier (format:check to only check)
 npm run build                # static export to out/
 BRAND=example npm run dev    # run with another brand (see docs/white-labelling.md)
 ```

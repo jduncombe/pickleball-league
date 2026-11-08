@@ -32,7 +32,11 @@ export function LeagueShell(props: Props) {
 
 function LeagueShellInner({ children, allowSetup = false }: Props) {
   const leagueId = Number(useSearchParams().get("id"));
-  const { data: league, error, reload } = useLoader(
+  const {
+    data: league,
+    error,
+    reload,
+  } = useLoader(
     () => (leagueId ? api.getLeague(leagueId) : Promise.reject(new Error(`No ${term("league")} selected`))),
     [leagueId],
   );

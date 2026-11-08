@@ -32,7 +32,11 @@ function toSetup(team: TeamDraft): TeamSetup {
     name: team.name.trim() || null,
     players: team.players
       .filter((p) => p.name.trim())
-      .map((p) => ({ name: p.name.trim(), email: p.email.trim() || null, dupr_id: p.dupr_id.trim() || null })),
+      .map((p) => ({
+        name: p.name.trim(),
+        email: p.email.trim() || null,
+        dupr_id: p.dupr_id.trim() || null,
+      })),
   };
 }
 
@@ -112,12 +116,7 @@ export function TeamsForm({
         <button type="button" className="secondary" disabled={busy !== null} onClick={() => run("back")}>
           ← Back to basics
         </button>
-        <button
-          type="button"
-          className="secondary"
-          disabled={busy !== null}
-          onClick={() => run("save")}
-        >
+        <button type="button" className="secondary" disabled={busy !== null} onClick={() => run("save")}>
           {busy === "save" ? "Saving…" : saved ? "Saved" : "Save draft"}
         </button>
         <button type="submit" disabled={busy !== null}>
@@ -143,7 +142,12 @@ function TeamFields({
   useTeamNames: boolean;
   onChange: (change: (team: TeamDraft) => TeamDraft) => void;
 }) {
-  const shownAs = teamDisplayName(useTeamNames, team.name, team.players.map((p) => p.name), position);
+  const shownAs = teamDisplayName(
+    useTeamNames,
+    team.name,
+    team.players.map((p) => p.name),
+    position,
+  );
   const setPlayer = (j: number, field: keyof PlayerDraft, value: string) =>
     onChange((t) => ({ ...t, players: t.players.map((p, k) => (k === j ? { ...p, [field]: value } : p)) }));
 

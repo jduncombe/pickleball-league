@@ -88,7 +88,10 @@ def test_display_names_follow_use_team_names(client):
     assert shown == ["Alex & Sam", "Ann, Bo & Cy"]
 
     match = client.get(f"/leagues/{unnamed['id']}/matches").json()[0]
-    assert {match["team_a"]["display_name"], match["team_b"]["display_name"]} == {"Alex & Sam", "Ann, Bo & Cy"}
+    assert {match["team_a"]["display_name"], match["team_b"]["display_name"]} == {
+        "Alex & Sam",
+        "Ann, Bo & Cy",
+    }
     standings = client.get(f"/leagues/{unnamed['id']}/standings").json()
     assert sorted(r["team"]["display_name"] for r in standings) == ["Alex & Sam", "Ann, Bo & Cy"]
 
@@ -219,6 +222,13 @@ def test_schedule_preview(client):
         "min_meetings": 4,
         "max_meetings": 4,
     }
-    odd = client.get("/schedule-preview", params={"num_teams": 7, "num_weeks": 4, "matches_per_week": 3}).json()
+    odd = client.get(
+        "/schedule-preview", params={"num_teams": 7, "num_weeks": 4, "matches_per_week": 3}
+    ).json()
     assert odd["teams_short_per_week"] == 1  # 7 x 3 is odd: one team a match short each week
-    assert client.get("/schedule-preview", params={"num_teams": 4, "num_weeks": 2, "matches_per_week": 4}).status_code == 422
+    assert (
+        client.get(
+            "/schedule-preview", params={"num_teams": 4, "num_weeks": 2, "matches_per_week": 4}
+        ).status_code
+        == 422
+    )

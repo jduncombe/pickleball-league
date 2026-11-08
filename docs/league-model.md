@@ -138,6 +138,14 @@ exposes this as `dupr_ready` on each team.
 Matches from a week other than the selected week can still be on court (e.g.
 make-up games); they appear under "On court" and block their teams.
 
+### Scoring apps on courts
+
+A scoring app (say, a tablet at each court) can **claim** a court, so no
+other app can, and then follows whatever match is on it: the organiser still
+starts matches from the live view, and the app shows the teams and sends the
+score. A court is offered to other apps again once its claim is released.
+See [api.md](api.md#scoring-app).
+
 ## Results & standings
 
 - A result can be entered for a match in any status: from the court card when

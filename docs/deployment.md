@@ -237,6 +237,11 @@ Deliberate trade-offs worth revisiting:
   "https-only"`.
 - **No WAF.** Attach AWS WAF to the distribution (rate limiting, managed rule
   groups) once the site is public.
+- **Scoring token not set.** The `/scoring` endpoints fall back to the
+  temporary token committed in `api/app/config.py`, and Terraform doesn't set
+  `SCORING_API_TOKEN` yet. Before exposing them, store your own token in
+  Secrets Manager and add it to the task definition's `secrets` in
+  `infra/app/api.tf`, the way the database password is.
 - **No authentication.** Anyone with the URL can edit leagues. See
   [architecture.md](architecture.md#known-gaps--next-steps).
 - **CloudFront 403 handling.** CloudFront turns *any* 403 into the site's 404

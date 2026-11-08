@@ -159,6 +159,82 @@ Match object:
 }
 ```
 
+## Scoring app
+
+Endpoints for a scoring app, such as a tablet at the courts. Unlike the rest
+of the API, they need a token:
+
+```
+Authorization: Bearer <token>
+```
+
+> **Temporary.** This is one shared token, standing in until real
+> authentication arrives (see [architecture.md](architecture.md#known-gaps--next-steps)).
+> The default, `NHyDvT2_fCQyNDDteDHPxHsurnlgedJFHZ0wEV5O1tA`, is in the
+> repository, so it isn't a secret: set `SCORING_API_TOKEN` to your own value
+> wherever the API is reachable by anyone else. Only these endpoints check
+> it; the rest of the API is still open.
+
+A missing or wrong token is a **401** with `WWW-Authenticate: Bearer`, never
+a 403 (CloudFront turns 403s into the site's 404 page). In
+[`/docs`](http://localhost:8000/docs), use **Authorize** to try them.
+
+A scoring app at a court typically:
+
+1. lists the leagues being played and the user picks one;
+2. lists that league's **free** courts and claims one, so no other app can;
+3. polls the court for its match (the organiser starts matches on courts
+   from the live view) and sends the score when the game ends;
+4. releases the court when it's done (e.g. at the end of the night).
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/scoring/leagues` | Leagues being played (`status: "active"`), newest first: `id`, `name`, `num_courts`, `current_week`, `points_to_win` |
+| `GET` | `/scoring/leagues/{id}/courts` | The league's courts that **no app has claimed**: `[{"court": 1, "in_use": false}, …]`. `in_use` means a match is on it now. 409 while the league is in setup. |
+| `POST` | `/scoring/leagues/{id}/courts/{court}/claim` | Claim a court. Optional body `{"device_name": "Court 3 tablet"}` (up to 80 characters), shown to anyone else who tries it. **201** with the claim; **409** if it's already claimed (the message names the device); 404 for a court outside `1…num_courts`; 409 while the league is in setup. |
+| `DELETE` | `/scoring/leagues/{id}/courts/{court}/claim` | Release a court, so it's offered again. 204, also if it wasn't claimed. |
+| `GET` | `/scoring/leagues/{id}/courts/{court}/match` | The match on the court now, with the scoring rules and the claim (see below). `match` is `null` when nothing is being played. 404 for an unknown court. |
+| `GET` | `/scoring/leagues/{id}/matches?week=&status=` | A week's matches (default: the league's `current_week`), in round order, with the scoring rules |
+| `PUT` | `/scoring/matches/{id}/result` | Record a score: `{"score_a": 11, "score_b": 7}`. Same rules and errors as `PUT /matches/{id}/result` (422 for an invalid score, 409 once verified or while the league is in setup). Returns the match object, and frees the court for its next match. |
+
+Court claims only stop two scoring apps using the same court; they don't
+affect which matches can start where. Anyone with the token can release any
+claim, which is also how an organiser frees a court held by a lost or
+crashed device. Claims are kept when the league goes back into setup; a
+claim on a court the league no longer has (after reducing `num_courts`) is
+ignored.
+
+A court and its match:
+
+```json
+{
+  "league_id": 1, "league_name": "Autumn", "court": 2, "points_to_win": 11,
+  "claim": { "league_id": 1, "court": 2, "device_name": "Court 2 tablet",
+             "claimed_at": "2026-11-10T18:01:00Z" },
+  "match": { /* match object, as above, or null */ }
+}
+```
+
+A week's matches:
+
+```json
+{
+  "league_id": 1, "league_name": "Autumn", "points_to_win": 11, "week": 2,
+  "matches": [ /* match objects, as above */ ]
+}
+```
+
+```bash
+TOKEN=NHyDvT2_fCQyNDDteDHPxHsurnlgedJFHZ0wEV5O1tA
+curl -H "Authorization: Bearer $TOKEN" localhost:8000/scoring/leagues
+curl -H "Authorization: Bearer $TOKEN" localhost:8000/scoring/leagues/1/courts
+curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"device_name": "Court 2 tablet"}' localhost:8000/scoring/leagues/1/courts/2/claim
+curl -H "Authorization: Bearer $TOKEN" localhost:8000/scoring/leagues/1/courts/2/match
+curl -X PUT -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"score_a": 11, "score_b": 7}' localhost:8000/scoring/matches/12/result
+```
+
 ## Meta
 
 | Method | Path | Description |

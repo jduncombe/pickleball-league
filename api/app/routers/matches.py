@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
@@ -16,9 +16,7 @@ def _get_playable(db, match_id: int) -> Match:
     """Fetch a match whose league is active (no play while a league is in setup)."""
     match = get_or_404(db, Match, match_id)
     if match.league.status != LeagueStatus.ACTIVE:
-        raise HTTPException(
-            409, f"{Term('league')} is in setup; create the {term('league')} to resume play"
-        )
+        raise HTTPException(409, f"{Term('league')} is in setup; create the {term('league')} to resume play")
     return match
 
 
@@ -54,7 +52,7 @@ def start_match(match_id: int, payload: schemas.MatchStart, db: DB):
 
     match.status = MatchStatus.IN_PROGRESS
     match.court = court
-    match.started_at = datetime.now(timezone.utc)
+    match.started_at = datetime.now(UTC)
     db.commit()
     return match
 
@@ -99,7 +97,7 @@ def record_result(match_id: int, payload: schemas.MatchResult, db: DB):
     match.score_a = payload.score_a
     match.score_b = payload.score_b
     match.status = MatchStatus.COMPLETED
-    match.completed_at = datetime.now(timezone.utc)
+    match.completed_at = datetime.now(UTC)
     db.commit()
     return match
 
@@ -111,6 +109,6 @@ def verify_result(match_id: int, db: DB):
     if match.status != MatchStatus.COMPLETED:
         raise HTTPException(409, f"Only completed {term('match', 2)} can be verified")
     if match.verified_at is None:
-        match.verified_at = datetime.now(timezone.utc)
+        match.verified_at = datetime.now(UTC)
         db.commit()
     return match

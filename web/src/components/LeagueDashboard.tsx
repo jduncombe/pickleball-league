@@ -21,10 +21,7 @@ const REFRESH_MS = 15_000;
 export function LeagueDashboard({ leagueId }: { leagueId: number }) {
   const [week, setWeek] = useState<number | undefined>(undefined);
   const [actionError, setActionError] = useState<string | null>(null);
-  const { data, error, loading, reload } = useLoader(
-    () => api.dashboard(leagueId, week),
-    [leagueId, week],
-  );
+  const { data, error, loading, reload } = useLoader(() => api.dashboard(leagueId, week), [leagueId, week]);
 
   // Other devices may start/finish matches; keep the board fresh.
   useEffect(() => {

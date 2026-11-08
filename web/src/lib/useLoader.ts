@@ -1,31 +1,40 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+
+type Loaded<T> = { key: string; data: T | null; error: string | null };
 
 /** Load data on mount (and whenever `deps` change); exposes `reload` for after mutations. */
 export function useLoader<T>(load: () => Promise<T>, deps: unknown[] = []) {
-  const [data, setData] = useState<T | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  // `deps` are ids and counts, so their JSON is a stable key for them.
+  const key = JSON.stringify(deps);
+  const [state, setState] = useState<Loaded<T> | null>(null);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const run = useCallback(load, deps);
+  // The latest `load`, which closes over the latest props.
+  const loadRef = useRef(load);
+  useEffect(() => {
+    loadRef.current = load;
+  });
 
   const reload = useCallback(async () => {
     try {
-      setData(await run());
-      setError(null);
+      const data = await loadRef.current();
+      setState({ key, data, error: null });
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setLoading(false);
+      const error = err instanceof Error ? err.message : String(err);
+      setState((prev) => ({ key, data: prev?.data ?? null, error }));
     }
-  }, [run]);
+  }, [key]);
 
   useEffect(() => {
-    setLoading(true);
     reload();
   }, [reload]);
 
-  return { data, error, loading, reload };
+  // While `deps` change, the previous data stays visible with `loading` true.
+  return {
+    data: state?.data ?? null,
+    error: state?.error ?? null,
+    loading: state?.key !== key,
+    reload,
+  };
 }

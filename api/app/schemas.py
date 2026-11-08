@@ -179,6 +179,55 @@ class MatchResult(BaseModel):
 # --- Dashboard / standings -------------------------------------------------------
 
 
+class ScoringLeague(ORMModel):
+    id: int
+    name: str
+    num_courts: int
+    current_week: int
+    points_to_win: int
+
+
+class ScoringCourt(BaseModel):
+    court: int
+    # A match is on this court now (it can still be claimed).
+    in_use: bool
+
+
+class CourtClaimCreate(BaseModel):
+    device_name: str | None = Field(default=None, max_length=80)
+
+    @field_validator("device_name", mode="before")
+    @classmethod
+    def _blank_is_none(cls, value):
+        return _clean_optional(value)
+
+
+class CourtClaimRead(ORMModel):
+    league_id: int
+    court: int
+    device_name: str | None
+    claimed_at: datetime
+
+
+class CourtMatch(BaseModel):
+    """What's being played on a court; ``match`` is null when it's free."""
+
+    league_id: int
+    league_name: str
+    court: int
+    points_to_win: int
+    claim: CourtClaimRead | None
+    match: MatchRead | None
+
+
+class ScoringMatches(BaseModel):
+    league_id: int
+    league_name: str
+    points_to_win: int
+    week: int
+    matches: list[MatchRead]
+
+
 class Dashboard(BaseModel):
     league: LeagueRead
     week: int

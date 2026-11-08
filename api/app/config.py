@@ -36,3 +36,9 @@ CORS_ORIGINS = [
     for origin in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
     if origin.strip()
 ]
+
+# TEMPORARY: bearer token for the scoring-app endpoints (routers/scoring.py),
+# until real authentication replaces it (docs/architecture.md, known gaps).
+# The default is committed to the repo, so it is not a secret: set
+# SCORING_API_TOKEN to your own value anywhere the API is reachable by others.
+SCORING_API_TOKEN = os.getenv("SCORING_API_TOKEN") or "NHyDvT2_fCQyNDDteDHPxHsurnlgedJFHZ0wEV5O1tA"

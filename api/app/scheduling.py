@@ -29,7 +29,7 @@ import random
 from collections import Counter
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from functools import lru_cache
+from functools import cache
 
 Pairing = tuple[int, int]
 CostFn = Callable[[int, int], int]
@@ -55,7 +55,7 @@ def _cheapest_pairing(teams: list[int], cost: CostFn) -> list[Pairing]:
     if len(teams) <= _EXACT_LIMIT:
         n = len(teams)
 
-        @lru_cache(maxsize=None)
+        @cache
         def best(mask: int) -> tuple[int, tuple[Pairing, ...]]:
             if mask == (1 << n) - 1:
                 return 0, ()
@@ -71,9 +71,7 @@ def _cheapest_pairing(teams: list[int], cost: CostFn) -> list[Pairing]:
         return list(best(0)[1])
 
     # Greedy: cheapest pairs first...
-    candidates = sorted(
-        (cost(a, b), a, b) for i, a in enumerate(teams) for b in teams[i + 1 :]
-    )
+    candidates = sorted((cost(a, b), a, b) for i, a in enumerate(teams) for b in teams[i + 1 :])
     used: set[int] = set()
     pairs: list[list[int]] = []
     for _, a, b in candidates:
@@ -272,7 +270,7 @@ def build_schedule(
             score = (repeats, sum(c * c for c in trial.met.values()))
             if best is None or score < best[0]:
                 best = (score, rounds, trial)
-            if repeats == 0 and _ATTEMPTS_PER_WEEK_IF_CLEAN <= attempt + 1:
+            if repeats == 0 and attempt + 1 >= _ATTEMPTS_PER_WEEK_IF_CLEAN:
                 break
         _, rounds, season = best
         for rnd, pairings in enumerate(rounds, start=1):
@@ -312,9 +310,7 @@ def summarize(
     return ScheduleSummary(
         rounds_per_week=[rounds[w] for w in weeks],
         games_per_week=[games[w] for w in weeks],
-        short_team_weeks=sum(
-            1 for w in weeks for t in teams if played[w, t] < matches_per_week
-        ),
+        short_team_weeks=sum(1 for w in weeks for t in teams if played[w, t] < matches_per_week),
         min_meetings=min(meetings.values(), default=0),
         max_meetings=max(meetings.values(), default=0),
     )

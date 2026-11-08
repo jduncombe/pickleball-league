@@ -27,10 +27,11 @@ export default function MatchesPage() {
 
 function WeekSchedule({ league, onResult }: { league: League; onResult: () => void }) {
   const [week, setWeek] = useState(league.current_week);
-  const { data: matches, error, reload } = useLoader(
-    () => api.listMatches(league.id, week),
-    [league.id, week],
-  );
+  const {
+    data: matches,
+    error,
+    reload,
+  } = useLoader(() => api.listMatches(league.id, week), [league.id, week]);
 
   const { data: teams } = useLoader(() => api.listTeams(league.id), [league.id]);
 
@@ -48,30 +49,24 @@ function WeekSchedule({ league, onResult }: { league: League; onResult: () => vo
     <section className="stack">
       <nav className="tabs weeks">
         {Array.from({ length: league.num_weeks }, (_, i) => i + 1).map((w) => (
-          <button
-            key={w}
-            className={w === week ? "active" : ""}
-            onClick={() => setWeek(w)}
-          >
+          <button key={w} className={w === week ? "active" : ""} onClick={() => setWeek(w)}>
             {Term("week")} {w}
           </button>
         ))}
       </nav>
       <ErrorBanner message={error} />
-      {!matches ? (
-        !error && <Loading />
-      ) : (
-        [...rounds.entries()].map(([round, roundMatches]) => (
-          <RoundCard
-            key={round}
-            round={round}
-            matches={roundMatches}
-            teams={teams}
-            pointsToWin={league.points_to_win}
-            onSaved={onSaved}
-          />
-        ))
-      )}
+      {!matches
+        ? !error && <Loading />
+        : [...rounds.entries()].map(([round, roundMatches]) => (
+            <RoundCard
+              key={round}
+              round={round}
+              matches={roundMatches}
+              teams={teams}
+              pointsToWin={league.points_to_win}
+              onSaved={onSaved}
+            />
+          ))}
     </section>
   );
 }
@@ -118,7 +113,11 @@ function RoundCard({
         {matches.map((m) => (
           <li key={m.id}>
             <span className={`badge ${m.verified_at ? "verified" : m.status}`}>
-              {m.verified_at ? "✓ verified" : m.status === "in_progress" ? `${Term("court")} ${m.court}` : m.status}
+              {m.verified_at
+                ? "✓ verified"
+                : m.status === "in_progress"
+                  ? `${Term("court")} ${m.court}`
+                  : m.status}
             </span>
             <Matchup match={m} />
             <span className="action">
@@ -150,7 +149,9 @@ function VerifyButton({ match, onVerified }: { match: Match; onVerified: () => v
 
   async function verify() {
     const score = `${match.team_a.display_name} ${match.score_a} – ${match.score_b} ${match.team_b.display_name}`;
-    if (!window.confirm(`Verify this result?\n\n${score}\n\nVerified results are locked and can't be changed.`)) {
+    if (
+      !window.confirm(`Verify this result?\n\n${score}\n\nVerified results are locked and can't be changed.`)
+    ) {
       return;
     }
     setBusy(true);
