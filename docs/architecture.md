@@ -68,6 +68,7 @@ hides the difference; the API test suite runs against both in CI.
 | `NEXT_PUBLIC_API_URL` | web (build time) | `/api` | Base URL the browser uses for API calls |
 | `BRAND` | web (build time) | `default` | White-label brand folder in `web/brands/` ([white-labelling.md](white-labelling.md)) |
 | `APP_NAME` | api | `Pickleball League` | Product name in the API docs title |
+| `SCORING_API_TOKEN` | api | a temporary token committed in `config.py` | Bearer token for the scoring-app endpoints ([api.md](api.md#scoring-app)). Set your own anywhere the API is reachable by others. |
 | `TERMS_FILE` / `TERMS_JSON` | api | default terms | The brand's terminology table (a path to its `terms.json`, or the JSON itself) for API messages ([white-labelling.md](white-labelling.md)) |
 | `TEST_DATABASE_URL` | api tests | in-memory SQLite | Run the tests against another database (CI uses Postgres) |
 
@@ -87,7 +88,9 @@ hides the difference; the API test suite runs against both in CI.
 This is a skeleton. Likely next steps, roughly in priority order:
 
 1. **Authentication & roles** — organiser vs. read-only viewer, e.g. Amazon
-   Cognito with tokens verified by the API.
+   Cognito with tokens verified by the API. Until then, only the scoring-app
+   endpoints (`/scoring/*`) are protected, by one shared, temporary token
+   (`SCORING_API_TOKEN`, see [api.md](api.md#scoring-app)).
 2. **Migrations** — replace `create_all` with Alembic before the schema changes
    (and before running more than one API task, which would race on first start).
 3. **Scheduling options** — balance courts across teams, respect team

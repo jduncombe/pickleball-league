@@ -179,6 +179,14 @@ class MatchResult(BaseModel):
 # --- Dashboard / standings -------------------------------------------------------
 
 
+class ScoringMatches(BaseModel):
+    league_id: int
+    league_name: str
+    points_to_win: int
+    week: int
+    matches: list[MatchRead]
+
+
 class Dashboard(BaseModel):
     league: LeagueRead
     week: int

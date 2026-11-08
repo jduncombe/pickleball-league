@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import APP_NAME, CORS_ORIGINS, ROOT_PATH
 from .database import init_db
-from .routers import leagues, matches, setup, teams
+from .routers import leagues, matches, scoring, setup, teams
 
 
 @asynccontextmanager
@@ -36,6 +36,7 @@ app.include_router(setup.preview_router)
 app.include_router(leagues.router)
 app.include_router(teams.router)
 app.include_router(matches.router)
+app.include_router(scoring.router)
 
 
 @app.get("/health", tags=["meta"])
