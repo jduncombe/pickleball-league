@@ -612,3 +612,69 @@ input[aria-invalid="true"] {
 .points-field select {
   max-width: 12em;
 }
+
+/* --- Accounts ---------------------------------------------------------- */
+.small {
+  font-size: 0.85rem;
+}
+.nav-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--header-text, var(--text));
+}
+.nav-user button.link {
+  color: inherit;
+}
+
+.login {
+  max-width: 420px;
+  margin: 32px auto;
+}
+.login h1 {
+  margin: 0;
+}
+.login .qr {
+  align-self: center;
+  width: 200px;
+  height: 200px;
+  background: #fff;
+  border-radius: var(--radius-control);
+}
+.login .secret {
+  display: block;
+  font-size: 1.05rem;
+  letter-spacing: 0.05em;
+  word-break: break-all;
+}
+.login input[name="code"] {
+  font-size: 1.4rem;
+  letter-spacing: 0.3em;
+  text-align: center;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+table.users td {
+  vertical-align: middle;
+}
+table.users tr.inactive td {
+  opacity: 0.6;
+}
+.user-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+@media (max-width: 720px) {
+  .nav nav {
+    flex-wrap: wrap;
+    gap: 8px 12px;
+  }
+}
+.account {
+  max-width: 520px;
+}

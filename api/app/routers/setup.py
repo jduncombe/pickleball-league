@@ -10,16 +10,17 @@ results; names, players and courts can.
 
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from .. import schemas
-from ..deps import DB, get_or_404
+from ..auth import Manager, managed_league, require_manager
+from ..deps import DB
 from ..models import League, LeagueStatus, Match, MatchStatus, Player, Team
 from ..scheduling import build_schedule, summarize
 from ..terms import Term, count, term
 
-router = APIRouter(prefix="/leagues", tags=["league setup"])
-preview_router = APIRouter(tags=["league setup"])
+router = APIRouter(prefix="/leagues", tags=["league setup"], dependencies=[Depends(require_manager)])
+preview_router = APIRouter(tags=["league setup"], dependencies=[Depends(require_manager)])
 
 # Changing any of these means a different schedule.
 SCHEDULE_FIELDS = ("num_teams", "num_weeks", "matches_per_week")
@@ -87,9 +88,9 @@ def schedule_preview(
 
 
 @router.post("", response_model=schemas.LeagueRead, status_code=201)
-def create_league(payload: schemas.LeagueBasics, db: DB):
-    """Setup step 1 for a new league: creates it in setup with empty teams."""
-    league = League(**payload.model_dump(), status=LeagueStatus.SETUP)
+def create_league(payload: schemas.LeagueBasics, user: Manager, db: DB):
+    """Setup step 1 for a new league: creates it in setup with empty teams, owned by you."""
+    league = League(**payload.model_dump(), status=LeagueStatus.SETUP, owner_id=user.id)
     league.teams = [Team(position=p) for p in range(1, payload.num_teams + 1)]
     db.add(league)
     db.commit()
@@ -97,9 +98,9 @@ def create_league(payload: schemas.LeagueBasics, db: DB):
 
 
 @router.put("/{league_id}/setup", response_model=schemas.LeagueRead)
-def update_basics(league_id: int, payload: schemas.LeagueBasics, db: DB):
+def update_basics(league_id: int, payload: schemas.LeagueBasics, user: Manager, db: DB):
     """Setup step 1 for an existing league in setup."""
-    league = get_or_404(db, League, league_id)
+    league = managed_league(db, user, league_id)
     _require_setup(league)
 
     if league.has_played_matches:
@@ -124,13 +125,13 @@ def update_basics(league_id: int, payload: schemas.LeagueBasics, db: DB):
 
 
 @router.put("/{league_id}/teams", response_model=list[schemas.TeamRead])
-def update_teams(league_id: int, payload: schemas.TeamsSetup, db: DB):
+def update_teams(league_id: int, payload: schemas.TeamsSetup, user: Manager, db: DB):
     """Setup step 2: names and players for every team, in position order.
 
     Team names are stored even when the league doesn't use them, so switching
     team names off and on again doesn't lose them.
     """
-    league = get_or_404(db, League, league_id)
+    league = managed_league(db, user, league_id)
     _require_setup(league)
     if len(payload.teams) != league.num_teams:
         raise HTTPException(422, f"Expected {count(league.num_teams, 'team')}, got {len(payload.teams)}")
@@ -143,10 +144,10 @@ def update_teams(league_id: int, payload: schemas.TeamsSetup, db: DB):
 
 
 @router.post("/{league_id}/finalize", response_model=schemas.LeagueRead)
-def create_the_league(league_id: int, db: DB):
+def create_the_league(league_id: int, user: Manager, db: DB):
     """Create the league (the "Create the league" button): check setup is complete, build the schedule if
     needed, and make the league active. Teams and players are then fixed."""
-    league = get_or_404(db, League, league_id)
+    league = managed_league(db, user, league_id)
     _require_setup(league)
 
     problems = []
@@ -168,10 +169,10 @@ def create_the_league(league_id: int, db: DB):
 
 
 @router.post("/{league_id}/edit", response_model=schemas.LeagueRead)
-def edit_setup(league_id: int, db: DB):
+def edit_setup(league_id: int, user: Manager, db: DB):
     """Edit setup (the "Edit setup" button): put an active league back into setup. Play is paused
     until the league is created again."""
-    league = get_or_404(db, League, league_id)
+    league = managed_league(db, user, league_id)
     if league.status == LeagueStatus.SETUP:
         return league
     if any(m.status == MatchStatus.IN_PROGRESS for m in league.matches):

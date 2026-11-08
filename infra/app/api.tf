@@ -7,6 +7,32 @@ locals {
   db_secret_arn = aws_db_instance.main.master_user_secret[0].secret_arn
 }
 
+# --- Auth key ----------------------------------------------------------------------
+
+# AUTH_SECRET_KEY (api/app/security.py): the PASETO token key and the TOTP
+# encryption key are derived from it. Generated once; changing it signs
+# everyone out and makes every authenticator need resetting, so later
+# applies leave it alone (ignore_changes). The value is in Terraform state,
+# which is encrypted in the state bucket.
+data "aws_secretsmanager_random_password" "auth" {
+  password_length     = 64
+  exclude_punctuation = true
+}
+
+resource "aws_secretsmanager_secret" "auth" {
+  name        = "${local.name}/auth-secret-key"
+  description = "Master key for API sign-in tokens and TOTP secrets (AUTH_SECRET_KEY)."
+}
+
+resource "aws_secretsmanager_secret_version" "auth" {
+  secret_id     = aws_secretsmanager_secret.auth.id
+  secret_string = data.aws_secretsmanager_random_password.auth.random_password
+
+  lifecycle {
+    ignore_changes = [secret_string]
+  }
+}
+
 # --- Load balancer ----------------------------------------------------------------
 
 resource "aws_security_group" "alb" {
@@ -85,7 +111,7 @@ data "aws_iam_policy_document" "ecs_tasks_trust" {
   }
 }
 
-# Used by ECS itself: pull the image, write logs, read the DB secret.
+# Used by ECS itself: pull the image, write logs, read the DB and auth secrets.
 resource "aws_iam_role" "api_execution" {
   name               = "${local.name}-api-execution"
   assume_role_policy = data.aws_iam_policy_document.ecs_tasks_trust.json
@@ -99,12 +125,12 @@ resource "aws_iam_role_policy_attachment" "api_execution" {
 data "aws_iam_policy_document" "api_execution_secrets" {
   statement {
     actions   = ["secretsmanager:GetSecretValue"]
-    resources = [local.db_secret_arn]
+    resources = [local.db_secret_arn, aws_secretsmanager_secret.auth.arn]
   }
 }
 
 resource "aws_iam_role_policy" "api_execution_secrets" {
-  name   = "read-db-secret"
+  name   = "read-secrets"
   role   = aws_iam_role.api_execution.id
   policy = data.aws_iam_policy_document.api_execution_secrets.json
 }
@@ -158,10 +184,13 @@ resource "aws_ecs_task_definition" "api" {
       { name = "TERMS_JSON", value = jsonencode(jsondecode(file("${path.module}/../../web/brands/${var.brand}/terms.json"))) },
       # Browsers reach the API same-origin through CloudFront; no CORS needed.
       { name = "CORS_ORIGINS", value = "" },
+      # CloudFront then the ALB append to X-Forwarded-For (sign-in rate limit).
+      { name = "TRUSTED_PROXY_HOPS", value = "2" },
     ]
     secrets = [
       { name = "DB_USER", valueFrom = "${local.db_secret_arn}:username::" },
       { name = "DB_PASSWORD", valueFrom = "${local.db_secret_arn}:password::" },
+      { name = "AUTH_SECRET_KEY", valueFrom = aws_secretsmanager_secret.auth.arn },
     ]
 
     logConfiguration = {

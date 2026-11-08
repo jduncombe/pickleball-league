@@ -24,7 +24,11 @@ BRAND=example npm run dev    # run with another brand (see docs/white-labelling.
 | `src/app/league/setup/` | League setup steps 1–2, "Create the league", edit setup |
 | `src/components/setup/` | Setup forms (basics, teams & players) |
 | `src/app/league/matches/` | Schedule, result entry, standings |
-| `src/lib/api.ts` | Typed API client (same-origin `/api`) |
+| `src/app/login/` | Sign in: password, then authenticator setup or code |
+| `src/app/users/` | Account management (admins) |
+| `src/app/account/` | Change your password |
+| `src/lib/auth.tsx` | Session context: redirects to sign-in, sign-out, the current user |
+| `src/lib/api.ts` | Typed API client (same-origin `/api`, session cookie, `X-Requested-With`) |
 | `src/lib/brand.ts` | The `Brand` type; the active brand is imported as `@brand/brand` |
 | `brands/<name>/` | White-label brands: `brand.ts` (name, copy, logos), `theme.css` (colour/font tokens), images |
 | `src/lib/routes.ts` | Builds league page URLs |

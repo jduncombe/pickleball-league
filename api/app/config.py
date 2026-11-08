@@ -37,8 +37,37 @@ CORS_ORIGINS = [
     if origin.strip()
 ]
 
-# TEMPORARY: bearer token for the scoring-app endpoints (routers/scoring.py),
-# until real authentication replaces it (docs/architecture.md, known gaps).
-# The default is committed to the repo, so it is not a secret: set
-# SCORING_API_TOKEN to your own value anywhere the API is reachable by others.
-SCORING_API_TOKEN = os.getenv("SCORING_API_TOKEN") or "NHyDvT2_fCQyNDDteDHPxHsurnlgedJFHZ0wEV5O1tA"
+
+# --- Authentication (see app/security.py and docs/auth.md) ---------------------
+
+# Master secret for auth: the PASETO token key and the key that encrypts TOTP
+# secrets at rest are both derived from it (HKDF). At least 32 characters of
+# randomness, e.g. `python -c "import secrets; print(secrets.token_urlsafe(48))"`.
+# If it changes, everyone is signed out and every authenticator must be reset.
+AUTH_SECRET_KEY = os.getenv("AUTH_SECRET_KEY", "")
+# Without AUTH_SECRET_KEY, a key is generated once and kept in this file
+# (readable by the API's user only), next to the SQLite database by default.
+AUTH_SECRET_FILE = os.getenv("AUTH_SECRET_FILE", "./data/auth_secret")
+
+# How long a sign-in lasts. There are no refresh tokens: after this, sign in
+# again (password + TOTP code).
+ACCESS_TOKEN_TTL_SECONDS = int(os.getenv("ACCESS_TOKEN_TTL_SECONDS", str(8 * 3600)))
+# Between the password step and the TOTP step of a sign-in.
+MFA_TOKEN_TTL_SECONDS = 300
+
+# The web app's session cookie. Secure (HTTPS-only, also allowed on
+# http://localhost by browsers) unless COOKIE_SECURE=false.
+COOKIE_SECURE = os.getenv("COOKIE_SECURE", "true").lower() != "false"
+SESSION_COOKIE = "__Host-session" if COOKIE_SECURE else "session"
+
+# Account lockout: this many failed passwords or TOTP codes in a row lock the
+# account for LOCKOUT_SECONDS.
+MAX_FAILED_LOGINS = 5
+LOCKOUT_SECONDS = 15 * 60
+# Per client IP, across accounts (password spraying): attempts per minute.
+LOGIN_ATTEMPTS_PER_MINUTE = int(os.getenv("LOGIN_ATTEMPTS_PER_MINUTE", "20"))
+# Proxies in front of the API that append to X-Forwarded-For, so the client's
+# IP (for the sign-in rate limit) can be told from one it made up: 0 when the
+# API is reached directly, 1 behind nginx (docker-compose), 2 behind
+# CloudFront + the ALB (AWS).
+TRUSTED_PROXY_HOPS = int(os.getenv("TRUSTED_PROXY_HOPS", "0"))

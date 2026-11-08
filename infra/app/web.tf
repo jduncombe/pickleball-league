@@ -182,8 +182,8 @@ resource "aws_cloudfront_distribution" "main" {
 
   # S3 answers 403 for missing keys (CloudFront has no ListBucket permission),
   # so serve the site's 404 page. Note this applies to every origin: the API
-  # must not use 403 for its own errors (use 401, or scope this differently
-  # when auth is added).
+  # must not use 403 for its own errors. It answers 401 when not signed in
+  # and 404 for what a role or owner can't see (api/app/auth.py).
   custom_error_response {
     error_code            = 403
     response_code         = 404

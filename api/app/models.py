@@ -1,4 +1,4 @@
-"""ORM models: League -> Teams -> Players, League -> Matches, League -> CourtClaims."""
+"""ORM models: League -> Teams -> Players, League -> Matches, League -> CourtClaims; Users."""
 
 import enum
 from datetime import UTC, datetime
@@ -28,6 +28,50 @@ class LeagueStatus(str, enum.Enum):
     ACTIVE = "active"
 
 
+class UserRole(str, enum.Enum):
+    # Everything, every league, and user management.
+    ADMIN = "admin"
+    # Creates and runs their own leagues.
+    USER = "user"
+    # Scoring app only: claims courts and records scores (routers/scoring.py).
+    UMPIRE = "umpire"
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    # Stored lower-cased; the sign-in name.
+    email: Mapped[str] = mapped_column(String(254), unique=True)
+    name: Mapped[str] = mapped_column(String(120))
+    role: Mapped[UserRole] = mapped_column(Enum(UserRole, values_callable=lambda e: [m.value for m in e]))
+    # Argon2id (see security.py).
+    password_hash: Mapped[str] = mapped_column(String(255))
+    # TOTP secret, AES-GCM encrypted (security.py). Null until enrolment starts;
+    # MFA is required, so an account can't sign in until mfa_enabled.
+    totp_secret: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    mfa_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Last TOTP time step accepted, so a code can't be used twice.
+    totp_last_step: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    failed_logins: Mapped[int] = mapped_column(Integer, default=0)
+    locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # In every token; bumping it signs the user out everywhere (password,
+    # role or MFA change, deactivation).
+    token_version: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class RevokedToken(Base):
+    """Tokens signed out before they expire. Kept until their expiry."""
+
+    __tablename__ = "revoked_tokens"
+
+    jti: Mapped[str] = mapped_column(String(64), primary_key=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+
+
 class League(Base):
     __tablename__ = "leagues"
 
@@ -51,7 +95,11 @@ class League(Base):
     created_league_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     current_week: Mapped[int] = mapped_column(Integer, default=1)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    # The user who runs the league. Null for leagues made before accounts
+    # existed, which only admins see.
+    owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
+    owner: Mapped[User | None] = relationship()
     teams: Mapped[list["Team"]] = relationship(
         back_populates="league", cascade="all, delete-orphan", order_by="Team.position"
     )
@@ -153,6 +201,11 @@ class CourtClaim(Base):
     court: Mapped[int] = mapped_column(Integer)
     # Optional label from the app ("Court 3 tablet"), shown when it's taken.
     device_name: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    # The account that claimed it (an umpire, or the league's organiser).
+    claimed_by_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=True
+    )
     claimed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
     league: Mapped[League] = relationship(back_populates="court_claims")
+    claimed_by: Mapped[User | None] = relationship()

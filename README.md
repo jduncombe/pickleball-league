@@ -23,6 +23,13 @@ docker compose up --build
 - Web UI: http://localhost:3000 (nginx serving the static export, with `/api/*` proxied to the API as CloudFront does in AWS)
 - API + interactive docs (Swagger): http://localhost:8000/docs, or http://localhost:3000/api/docs
 
+Create the first admin, then sign in at http://localhost:3000. The first
+sign-in sets up an authenticator app (see [docs/auth.md](docs/auth.md)):
+
+```bash
+docker compose exec api python -m app.cli create-user --email you@example.com --name "Your Name"
+```
+
 League data is stored in SQLite on the `api-data` Docker volume.
 `docker compose down -v` wipes it.
 
@@ -42,6 +49,7 @@ API (Python 3.11+):
 cd api
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements-dev.txt
+python -m app.cli create-user --email you@example.com --name "Your Name"   # first admin
 uvicorn app.main:app --reload          # http://localhost:8000
 pytest                                  # run the tests
 ```
@@ -59,16 +67,20 @@ npm run dev                             # http://localhost:3000 (/api/* forwarde
 
 | Screen | Route | What it does |
 | --- | --- | --- |
+| **Sign in** | `/login/` | Email and password, then a code from an authenticator app (set up with a QR code at the first sign-in). For admins and users; umpires sign in on the scoring app. |
 | **Live dashboard** (default) | `/` and `/league/?id=…` | Teams on court right now, with a per-court scoreboard for entering scores, and this week's match-ups that can start because neither team is playing. Matches from the earliest round are highlighted as the suggested next games, and teams whose players all have DUPR IDs are shown in a different colour. Start a match on a free court, enter its score, or return it to the schedule. |
 | League setup, step 1 | `/leagues/new`, then `/league/setup/?id=…&step=basics` | Name, number of teams, weeks, **matches per week** (per team; rounds are worked out, with a catch-up round for odd team counts), courts, **points to win** (11, 15 or 21; win by 2) and **whether to use team names**. |
 | League setup, step 2 | `/league/setup/?id=…&step=players` | Each team's players (optional **DUPR ID** and email), plus team names if enabled. Save a draft, or **Create the league**, which builds the schedule and fixes teams and players. **Edit setup** (in the league header) reopens both steps later. |
 | Teams & players | `/league/teams/?id=…` | Read-only list of teams and players. Teams without names are shown by their players' names. |
 | Schedule & results | `/league/matches/?id=…` | Week-by-week schedule grouped by round (with each round's bye when there's an odd number of teams), score entry/correction, **Verify** to lock a result, standings. |
-| Leagues | `/leagues` | All leagues, with a link back into setup for any league not yet created. |
+| Leagues | `/leagues` | Your leagues (all of them for admins), with a link back into setup for any league not yet created. |
+| Users (admins) | `/users/` | Add accounts (admin, user or umpire), change roles, set passwords, reset authenticators, deactivate. |
+| Account | `/account/` | Change your password. |
 
 ## Documentation
 
 - [Architecture](docs/architecture.md) — components, request flow, configuration, next steps
+- [Accounts & sign-in](docs/auth.md) — roles, the first admin, password + TOTP sign-in, how credentials are protected
 - [Deployment](docs/deployment.md) — AWS architecture, one-time setup, CI/CD, operations, costs
 - [White-labelling](docs/white-labelling.md) — brand name, logos, colours and fonts per deployment (`BRAND=…`)
 - [League model & scheduling](docs/league-model.md) — weeks, rounds, courts, and how the dashboard decides what's playable
@@ -87,7 +99,8 @@ npm run dev                             # http://localhost:3000 (/api/* forwarde
 │   │   ├── models.py       # SQLAlchemy models
 │   │   ├── schemas.py      # Pydantic request/response models
 │   │   ├── scheduling.py   # round-robin generator
-│   │   └── routers/        # leagues, teams/players, matches
+│   │   ├── auth.py, security.py  # who's calling; passwords, PASETO, TOTP
+│   │   └── routers/        # auth, users, leagues, teams/players, matches, scoring
 │   ├── tests/
 │   └── Dockerfile
 ├── web/                    # Next.js app

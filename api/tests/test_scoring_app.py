@@ -1,12 +1,14 @@
-"""The scoring-app endpoints and their bearer token."""
+"""The scoring-app endpoints (as an admin, unless a test says otherwise).
+
+Role and ownership rules for them are in test_permissions.py.
+"""
 
 import pytest
 
-from app import config
-
 from .helpers import BASICS, set_up_league
 
-AUTH = {"Authorization": f"Bearer {config.SCORING_API_TOKEN}"}
+# The client fixture is already signed in; kept so calls read as before.
+AUTH: dict[str, str] = {}
 
 
 def _first_match(client, league):
@@ -15,26 +17,19 @@ def _first_match(client, league):
 
 @pytest.mark.parametrize(
     "headers",
-    [{}, {"Authorization": "Bearer wrong"}, {"Authorization": f"Basic {config.SCORING_API_TOKEN}"}],
+    [{}, {"Authorization": "Bearer wrong"}, {"Authorization": "Basic d3Jvbmc="}],
     ids=["missing", "wrong-token", "wrong-scheme"],
 )
-def test_token_required(client, league, headers):
+def test_sign_in_required(anon, client, league, headers):
     lid = league["id"]
     for resp in (
-        client.get(f"/scoring/leagues/{lid}/matches", headers=headers),
-        client.put("/scoring/matches/1/result", json={"score_a": 11, "score_b": 7}, headers=headers),
+        anon.get(f"/scoring/leagues/{lid}/matches", headers=headers),
+        anon.put("/scoring/matches/1/result", json={"score_a": 11, "score_b": 7}, headers=headers),
     ):
         # 401, never 403 (CloudFront rewrites 403s to the site's 404 page).
         assert resp.status_code == 401
         assert resp.headers["WWW-Authenticate"] == "Bearer"
     assert client.get(f"/leagues/{lid}/matches?week=1").json()[0]["status"] == "scheduled"
-
-
-def test_token_can_be_overridden(client, league, monkeypatch):
-    monkeypatch.setattr(config, "SCORING_API_TOKEN", "local-token")
-    url = f"/scoring/leagues/{league['id']}/matches"
-    assert client.get(url, headers=AUTH).status_code == 401
-    assert client.get(url, headers={"Authorization": "Bearer local-token"}).status_code == 200
 
 
 def test_list_matches_defaults_to_current_week(client, league):
@@ -90,7 +85,7 @@ def _courts(client, lid):
     return resp.json()
 
 
-def test_court_routes_need_token(client, league):
+def test_court_routes_need_sign_in(anon, league):
     lid = league["id"]
     for method, url in [
         ("get", "/scoring/leagues"),
@@ -99,7 +94,7 @@ def test_court_routes_need_token(client, league):
         ("delete", f"/scoring/leagues/{lid}/courts/1/claim"),
         ("get", f"/scoring/leagues/{lid}/courts/1/match"),
     ]:
-        assert client.request(method, url).status_code == 401, url
+        assert anon.request(method, url).status_code == 401, url
 
 
 def test_list_leagues_only_active(client, league):

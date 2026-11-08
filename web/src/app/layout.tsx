@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { brand } from "@brand/brand";
 import { Nav } from "@/components/Nav";
+import { AuthProvider } from "@/lib/auth";
 import "@brand/theme.css";
 import "./globals.css";
 
@@ -15,8 +16,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
-        <Nav />
-        <main>{children}</main>
+        <AuthProvider>
+          <Nav />
+          <main>{children}</main>
+        </AuthProvider>
         {brand.footer && (
           <footer className="site-footer muted">
             {brand.footer.href ? <a href={brand.footer.href}>{brand.footer.text}</a> : brand.footer.text}
