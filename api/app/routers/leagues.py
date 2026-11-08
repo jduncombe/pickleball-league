@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 
 from .. import schemas
-from ..auth import Manager, managed_league, require_manager
+from ..auth import Manager, can_own, managed_league, require_manager, visible_to
 from ..deps import DB
 from ..models import League, Match, MatchStatus, UserRole
 from ..terms import term
@@ -12,10 +12,10 @@ router = APIRouter(prefix="/leagues", tags=["leagues"], dependencies=[Depends(re
 
 @router.get("", response_model=list[schemas.LeagueRead])
 def list_leagues(user: Manager, db: DB):
-    """Every league for admins; your own for organisers."""
+    """Every league for admins; your own and those shared with you for users."""
     query = select(League).order_by(League.created_at.desc())
     if user.role != UserRole.ADMIN:
-        query = query.where(League.owner_id == user.id)
+        query = query.where(visible_to(user))
     return db.scalars(query).all()
 
 
@@ -38,7 +38,11 @@ def update_league(league_id: int, payload: schemas.LeagueUpdate, user: Manager, 
 
 @router.delete("/{league_id}", status_code=204)
 def delete_league(league_id: int, user: Manager, db: DB):
-    db.delete(managed_league(db, user, league_id))
+    """Only the owner (or an admin) can delete a league; 409 for people it's shared with."""
+    league = managed_league(db, user, league_id)
+    if not can_own(user, league):
+        raise HTTPException(409, f"Only the {term('league')}'s owner can delete it")
+    db.delete(league)
     db.commit()
 
 

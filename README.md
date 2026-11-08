@@ -73,7 +73,8 @@ npm run dev                             # http://localhost:3000 (/api/* forwarde
 | League setup, step 2 | `/league/setup/?id=…&step=players` | Each team's players (optional **DUPR ID** and email), plus team names if enabled. Save a draft, or **Create the league**, which builds the schedule and fixes teams and players. **Edit setup** (in the league header) reopens both steps later. |
 | Teams & players | `/league/teams/?id=…` | Read-only list of teams and players. Teams without names are shown by their players' names. |
 | Schedule & results | `/league/matches/?id=…` | Week-by-week schedule grouped by round (with each round's bye when there's an odd number of teams), score entry/correction, **Verify** to lock a result, standings. |
-| Leagues | `/leagues` | Your leagues (all of them for admins), with a link back into setup for any league not yet created. |
+| Leagues | `/leagues` | Your leagues and those shared with you (all of them for admins), with a link back into setup for any league not yet created. |
+| Sharing | `/league/sharing/?id=…` | Who owns the league and who it's shared with. The owner (or an admin) shares it with other users by email; they can run it too, but not delete it or reshare it. |
 | Users (admins) | `/users/` | Add accounts (admin, user or umpire), change roles, set passwords, reset authenticators, deactivate. |
 | Account | `/account/` | Change your password. |
 

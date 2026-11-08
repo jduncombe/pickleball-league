@@ -100,6 +100,10 @@ class League(Base):
     owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
     owner: Mapped[User | None] = relationship()
+    # Other users the owner has shared the league with (co-organisers).
+    members: Mapped[list["LeagueMember"]] = relationship(
+        back_populates="league", cascade="all, delete-orphan", order_by="LeagueMember.added_at"
+    )
     teams: Mapped[list["Team"]] = relationship(
         back_populates="league", cascade="all, delete-orphan", order_by="Team.position"
     )
@@ -112,6 +116,28 @@ class League(Base):
     def has_played_matches(self) -> bool:
         """True once any match has started; the season's shape is then fixed."""
         return any(m.status != MatchStatus.SCHEDULED for m in self.matches)
+
+
+class LeagueMember(Base):
+    """A user the league's owner (or an admin) has shared the league with.
+
+    Members manage the league like its owner, except deleting it and
+    changing who it's shared with (see auth.py)."""
+
+    __tablename__ = "league_members"
+    __table_args__ = (UniqueConstraint("league_id", "user_id"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    league_id: Mapped[int] = mapped_column(ForeignKey("leagues.id", ondelete="CASCADE"))
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    added_by_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    added_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+    league: Mapped[League] = relationship(back_populates="members")
+    user: Mapped[User] = relationship(foreign_keys=[user_id])
+    added_by: Mapped[User | None] = relationship(foreign_keys=[added_by_id])
 
 
 class Team(Base):

@@ -58,10 +58,10 @@ league belongs to whoever creates it (`POST /leagues`).
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `GET` | `/leagues` | List leagues, newest first: all of them for admins, your own for users |
+| `GET` | `/leagues` | List leagues, newest first: all of them for admins; for users, their own and those shared with them |
 | `GET` | `/leagues/{id}` | Get a league |
 | `PATCH` | `/leagues/{id}` | Set `current_week` |
-| `DELETE` | `/leagues/{id}` | Delete a league and everything in it |
+| `DELETE` | `/leagues/{id}` | Delete a league and everything in it. Owner and admins only (409 for people it's shared with). |
 | `GET` | `/leagues/{id}/teams` | Teams with their players, in position order |
 | `GET` | `/leagues/{id}/matches?week=&status=` | Matches, optionally filtered |
 | `GET` | `/leagues/{id}/dashboard?week=` | Live view (defaults to `current_week`) |
@@ -85,6 +85,19 @@ Dashboard response:
   "total_count": 12
 }
 ```
+
+## League sharing
+
+The owner (or an admin) can share a league with other **user** accounts, who
+then manage it like the owner, except deleting it and changing who it's
+shared with. League objects include `"owner": {"id", "name", "email"}` (null
+for leagues from before accounts).
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/leagues/{id}/members` | `{"owner": {...}, "members": [{"user": {...}, "added_by": {...}, "added_at"}]}` |
+| `POST` | `/leagues/{id}/members` | `{"email": "sam@example.com"}`: share with that account. Owner and admins only (409 otherwise). 404 if there's no active account with that email; 422 for an admin or umpire account; 409 for the owner or someone it's already shared with. Returns the sharing as above. |
+| `DELETE` | `/leagues/{id}/members/{user_id}` | Stop sharing with someone. The owner and admins can remove anyone; others only themselves (leave). 204. |
 
 ## League setup
 

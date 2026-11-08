@@ -678,3 +678,6 @@ table.users tr.inactive td {
 .account {
   max-width: 520px;
 }
+.sharing td.row-actions {
+  text-align: right;
+}

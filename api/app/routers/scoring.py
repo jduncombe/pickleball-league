@@ -18,7 +18,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from .. import schemas
-from ..auth import Scorer, can_manage, can_score
+from ..auth import Scorer, can_manage, can_score, visible_to
 from ..deps import DB, get_or_404, not_found_error
 from ..models import CourtClaim, League, LeagueStatus, Match, MatchStatus, User, UserRole
 from ..terms import Term, term
@@ -65,7 +65,7 @@ def list_leagues(user: Scorer, db: DB):
     """Leagues you can score that are being played (active), newest first."""
     query = select(League).where(League.status == LeagueStatus.ACTIVE).order_by(League.created_at.desc())
     if user.role == UserRole.USER:
-        query = query.where(League.owner_id == user.id)
+        query = query.where(visible_to(user))
     return db.scalars(query).all()
 
 

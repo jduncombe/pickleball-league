@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { ErrorBanner, Loading } from "@/components/Status";
 import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import { leagueHref, setupHref } from "@/lib/routes";
 import { Term, term } from "@/lib/terms";
 import { useLoader } from "@/lib/useLoader";
 
 export default function LeaguesPage() {
   const { data: leagues, error } = useLoader(() => api.listLeagues());
+  const { user } = useAuth();
 
   return (
     <div className="stack">
@@ -36,6 +38,7 @@ export default function LeaguesPage() {
               <th>{Term("court", 2)}</th>
               <th>Current {term("week")}</th>
               <th>Status</th>
+              <th>Owner</th>
             </tr>
           </thead>
           <tbody>
@@ -52,6 +55,7 @@ export default function LeaguesPage() {
                 <td>
                   {l.status === "setup" ? <Link href={setupHref(l.id, "basics")}>In setup</Link> : "Active"}
                 </td>
+                <td className="muted">{l.owner?.id === user?.id ? "You" : (l.owner?.name ?? "–")}</td>
               </tr>
             ))}
           </tbody>

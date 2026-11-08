@@ -18,6 +18,7 @@ export function LeagueNav({ league }: { league: League }) {
     { path: "/league/matches", label: "Schedule & results" },
   ];
   if (inSetup) tabs.push({ path: "/league/setup", label: "Setup" });
+  tabs.push({ path: "/league/sharing", label: "Sharing" });
 
   return (
     <div className="league-nav">

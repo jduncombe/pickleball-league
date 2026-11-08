@@ -9,7 +9,9 @@ of the cookie's SameSite=Strict).
 
 Roles (models.UserRole):
 - admin: everything, every league, user management;
-- user: their own leagues (League.owner_id);
+- user: their own leagues (League.owner_id) and ones shared with them
+  (LeagueMember), which they manage like the owner except deleting the
+  league and changing who it's shared with;
 - umpire: the scoring endpoints only.
 
 What a caller may not see is answered with 404, the same as what doesn't
@@ -22,11 +24,12 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from . import config, security
 from .deps import DB, get_or_404, not_found_error
-from .models import League, LeagueStatus, Match, RevokedToken, Team, User, UserRole
+from .models import League, LeagueMember, LeagueStatus, Match, RevokedToken, Team, User, UserRole
 
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 CSRF_HEADER = "X-Requested-With"
@@ -121,8 +124,22 @@ Scorer = Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.USER, Us
 Admin = Annotated[User, Depends(require_roles(UserRole.ADMIN))]
 
 
-def can_manage(user: User, league: League) -> bool:
+def can_own(user: User, league: League) -> bool:
+    """Owner-only actions: deleting the league, and who it's shared with."""
     return user.role == UserRole.ADMIN or (user.role == UserRole.USER and league.owner_id == user.id)
+
+
+def can_manage(user: User, league: League) -> bool:
+    """Setup, schedule and results: the owner, people it's shared with, admins."""
+    if can_own(user, league):
+        return True
+    return user.role == UserRole.USER and any(m.user_id == user.id for m in league.members)
+
+
+def visible_to(user: User):
+    """A filter for the leagues this user manages (none needed for admins)."""
+    shared = select(LeagueMember.league_id).where(LeagueMember.user_id == user.id)
+    return or_(League.owner_id == user.id, League.id.in_(shared))
 
 
 def can_score(user: User, league: League) -> bool:

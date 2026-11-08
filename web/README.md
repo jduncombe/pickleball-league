@@ -24,6 +24,7 @@ BRAND=example npm run dev    # run with another brand (see docs/white-labelling.
 | `src/app/league/setup/` | League setup steps 1–2, "Create the league", edit setup |
 | `src/components/setup/` | Setup forms (basics, teams & players) |
 | `src/app/league/matches/` | Schedule, result entry, standings |
+| `src/app/league/sharing/` | Who the league is shared with; share by email, remove, leave |
 | `src/app/login/` | Sign in: password, then authenticator setup or code |
 | `src/app/users/` | Account management (admins) |
 | `src/app/account/` | Change your password |

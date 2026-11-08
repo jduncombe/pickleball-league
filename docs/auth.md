@@ -9,14 +9,19 @@ authenticator app** (TOTP); there's no way to turn the second step off.
 | Role | Web app | Leagues | Scoring app (`/scoring/*`) | Accounts |
 | --- | --- | --- | --- | --- |
 | **Admin** | Yes | All of them, including ones made before accounts existed | Any league | Create, change, deactivate, reset |
-| **User** | Yes | Their own: the leagues they create | Their own leagues | – |
+| **User** | Yes | The leagues they create, and ones shared with them | Those leagues | – |
 | **Umpire** | No (the sign-in page refuses them) | – | Any **active** league: claim a court, follow its match, record its score | – |
 
 Details:
 
 - A league belongs to the user who creates it (`leagues.owner_id`). Leagues
-  that existed before accounts have no owner, so only admins see them. An admin
-  can't hand a league to another user yet.
+  that existed before accounts have no owner, so only admins see them.
+- **Sharing:** the owner (or an admin) can share a league with other user
+  accounts, by email, on the league's **Sharing** tab. They then run it like
+  the owner (setup, schedule, results, the scoring app), but only the owner
+  and admins can delete the league or change who it's shared with. Someone
+  it's shared with can leave it. Leagues can't be shared with umpires (they
+  already score every active league) or admins (they see every league).
 - An umpire can record a score only for the match on a court **they have
   claimed**, while it's in progress. They can release only their own claims.
   The league's organiser and admins can release any claim, e.g. one held by a
@@ -123,7 +128,8 @@ container (the account lockout always applies).
 
 ## Not done yet
 
-- A league can't be shared with, or handed over to, another user.
+- A league can't be handed over to another owner, and sharing has one level
+  (co-organiser); there's no read-only access.
 - Umpires can score any active league; there's no per-league umpire list.
 - No self-service password reset by email; an admin sets a new password.
 - No recovery codes: a lost authenticator needs an admin to reset it (and

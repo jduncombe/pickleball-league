@@ -46,6 +46,12 @@ class LeagueUpdate(BaseModel):
     current_week: int | None = Field(default=None, ge=1)
 
 
+class UserRef(ORMModel):
+    id: int
+    name: str
+    email: str
+
+
 class LeagueRead(ORMModel):
     id: int
     name: str
@@ -61,6 +67,25 @@ class LeagueRead(ORMModel):
     has_played_matches: bool
     current_week: int
     created_at: datetime
+    # Null for leagues from before accounts (admins only).
+    owner: UserRef | None
+
+
+class LeagueMemberRead(ORMModel):
+    user: UserRef
+    added_by: UserRef | None
+    added_at: datetime
+
+
+class LeagueSharing(BaseModel):
+    owner: UserRef | None
+    members: list[LeagueMemberRead]
+
+
+class LeagueShare(BaseModel):
+    email: str = Field(max_length=254)
+
+    _email = field_validator("email", mode="before")(lambda v: v.strip().lower() if isinstance(v, str) else v)
 
 
 # --- Players -----------------------------------------------------------------

@@ -13,6 +13,7 @@ import type {
   Dashboard,
   League,
   LeagueBasics,
+  LeagueSharing,
   LoginStep,
   Match,
   MfaSetup,
@@ -106,6 +107,13 @@ export const api = {
     request<Dashboard>(`/leagues/${id}/dashboard${week ? `?week=${week}` : ""}`),
   standings: (id: number) => request<StandingRow[]>(`/leagues/${id}/standings`),
   listTeams: (leagueId: number) => request<Team[]>(`/leagues/${leagueId}/teams`),
+
+  // Sharing (only the owner and admins can change it; members can leave)
+  sharing: (id: number) => request<LeagueSharing>(`/leagues/${id}/members`),
+  share: (id: number, email: string) =>
+    request<LeagueSharing>(`/leagues/${id}/members`, { method: "POST", body: json({ email }) }),
+  unshare: (id: number, userId: number) =>
+    request<void>(`/leagues/${id}/members/${userId}`, { method: "DELETE" }),
 
   // Setup (teams and players can only be changed while a league is in setup)
   schedulePreview: (b: Pick<LeagueBasics, "num_teams" | "num_weeks" | "matches_per_week">) =>

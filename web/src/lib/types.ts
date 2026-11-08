@@ -31,6 +31,8 @@ export interface League extends LeagueBasics {
   has_played_matches: boolean;
   current_week: number;
   created_at: string;
+  /** Null for leagues from before accounts (admins only). */
+  owner: UserRef | null;
 }
 
 /** Setup step 2, one per team in position order. */
@@ -162,3 +164,15 @@ export interface UserCreate {
 }
 
 export type UserUpdate = Partial<Pick<User, "name" | "role" | "is_active">> & { password?: string };
+
+export interface UserRef {
+  id: number;
+  name: string;
+  email: string;
+}
+
+/** A league's owner and the users it's shared with (co-organisers). */
+export interface LeagueSharing {
+  owner: UserRef | null;
+  members: { user: UserRef; added_by: UserRef | null; added_at: string }[];
+}
