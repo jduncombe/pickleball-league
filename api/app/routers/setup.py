@@ -8,7 +8,7 @@ per week) and the points to win can no longer change, since that would invalidat
 results; names, players and courts can.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, HTTPException, Query
 
@@ -73,7 +73,9 @@ def schedule_preview(
             f"At most {count(num_teams - 1, 'match')} per {term('week')} with {count(num_teams, 'team')}",
         )
     teams = list(range(1, num_teams + 1))
-    summary = summarize(build_schedule(teams, num_weeks, matches_per_week), teams, num_weeks, matches_per_week)
+    summary = summarize(
+        build_schedule(teams, num_weeks, matches_per_week), teams, num_weeks, matches_per_week
+    )
     return schemas.SchedulePreview(
         rounds_per_week=max(summary.rounds_per_week),
         games_per_week=max(summary.games_per_week),
@@ -131,9 +133,7 @@ def update_teams(league_id: int, payload: schemas.TeamsSetup, db: DB):
     league = get_or_404(db, League, league_id)
     _require_setup(league)
     if len(payload.teams) != league.num_teams:
-        raise HTTPException(
-            422, f"Expected {count(league.num_teams, 'team')}, got {len(payload.teams)}"
-        )
+        raise HTTPException(422, f"Expected {count(league.num_teams, 'team')}, got {len(payload.teams)}")
 
     for team, setup in zip(league.teams, payload.teams, strict=True):
         team.name = setup.name
@@ -144,7 +144,7 @@ def update_teams(league_id: int, payload: schemas.TeamsSetup, db: DB):
 
 @router.post("/{league_id}/finalize", response_model=schemas.LeagueRead)
 def create_the_league(league_id: int, db: DB):
-    """"Create the league": check setup is complete, build the schedule if
+    """Create the league (the "Create the league" button): check setup is complete, build the schedule if
     needed, and make the league active. Teams and players are then fixed."""
     league = get_or_404(db, League, league_id)
     _require_setup(league)
@@ -161,7 +161,7 @@ def create_the_league(league_id: int, db: DB):
     if not league.matches:
         db.add_all(_generate_matches(league))
     league.status = LeagueStatus.ACTIVE
-    league.created_league_at = league.created_league_at or datetime.now(timezone.utc)
+    league.created_league_at = league.created_league_at or datetime.now(UTC)
     db.commit()
     db.refresh(league)
     return league
@@ -169,7 +169,7 @@ def create_the_league(league_id: int, db: DB):
 
 @router.post("/{league_id}/edit", response_model=schemas.LeagueRead)
 def edit_setup(league_id: int, db: DB):
-    """"Edit setup": put an active league back into setup. Play is paused
+    """Edit setup (the "Edit setup" button): put an active league back into setup. Play is paused
     until the league is created again."""
     league = get_or_404(db, League, league_id)
     if league.status == LeagueStatus.SETUP:

@@ -1,7 +1,7 @@
 """ORM models: League -> Teams -> Players, League -> Matches."""
 
 import enum
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -11,7 +11,7 @@ from .terms import Term
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class MatchStatus(str, enum.Enum):
@@ -48,18 +48,14 @@ class League(Base):
         default=LeagueStatus.SETUP,
     )
     # First time setup was finalised; stays set while the league is re-edited.
-    created_league_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    created_league_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     current_week: Mapped[int] = mapped_column(Integer, default=1)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
     teams: Mapped[list["Team"]] = relationship(
         back_populates="league", cascade="all, delete-orphan", order_by="Team.position"
     )
-    matches: Mapped[list["Match"]] = relationship(
-        back_populates="league", cascade="all, delete-orphan"
-    )
+    matches: Mapped[list["Match"]] = relationship(back_populates="league", cascade="all, delete-orphan")
 
     @property
     def has_played_matches(self) -> bool:

@@ -36,7 +36,11 @@ export function LeagueNav({ league }: { league: League }) {
           {tabs.map((tab) => (
             <Link
               key={tab.path}
-              href={tab.path === "/league/setup" ? setupHref(league.id, "basics") : leagueHref(tab.path, league.id)}
+              href={
+                tab.path === "/league/setup"
+                  ? setupHref(league.id, "basics")
+                  : leagueHref(tab.path, league.id)
+              }
               className={current === tab.path || current === tab.alsoActiveOn ? "active" : ""}
             >
               {tab.label}

@@ -75,8 +75,7 @@ export const api = {
     request<SchedulePreview>(
       `/schedule-preview?num_teams=${b.num_teams}&num_weeks=${b.num_weeks}&matches_per_week=${b.matches_per_week}`,
     ),
-  createLeague: (body: LeagueBasics) =>
-    request<League>("/leagues", { method: "POST", body: json(body) }),
+  createLeague: (body: LeagueBasics) => request<League>("/leagues", { method: "POST", body: json(body) }),
   updateBasics: (id: number, body: LeagueBasics) =>
     request<League>(`/leagues/${id}/setup`, { method: "PUT", body: json(body) }),
   updateTeams: (id: number, teams: TeamSetup[]) =>
@@ -91,8 +90,7 @@ export const api = {
     request<Match[]>(`/leagues/${leagueId}/matches${week ? `?week=${week}` : ""}`),
   startMatch: (matchId: number, court?: number) =>
     request<Match>(`/matches/${matchId}/start`, { method: "POST", body: json({ court }) }),
-  cancelMatch: (matchId: number) =>
-    request<Match>(`/matches/${matchId}/cancel`, { method: "POST" }),
+  cancelMatch: (matchId: number) => request<Match>(`/matches/${matchId}/cancel`, { method: "POST" }),
   /** Lock a completed match's result; it can't be changed afterwards. */
   verifyMatch: (matchId: number) => request<Match>(`/matches/${matchId}/verify`, { method: "POST" }),
   recordResult: (matchId: number, score_a: number, score_b: number) =>

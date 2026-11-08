@@ -15,7 +15,6 @@ from app.main import app  # noqa: E402
 
 from .helpers import set_up_league  # noqa: E402
 
-
 # Set TEST_DATABASE_URL (e.g. a throwaway Postgres) to run against a real server;
 # defaults to in-memory SQLite.
 TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")

@@ -32,7 +32,17 @@ def test_nine_teams_four_matches_per_week():
 
 @pytest.mark.parametrize(
     ("n", "weeks", "m"),
-    [(4, 3, 3), (6, 8, 2), (8, 10, 3), (9, 8, 4), (10, 6, 5), (11, 10, 4), (12, 8, 6), (13, 12, 4), (15, 6, 7)],
+    [
+        (4, 3, 3),
+        (6, 8, 2),
+        (8, 10, 3),
+        (9, 8, 4),
+        (10, 6, 5),
+        (11, 10, 4),
+        (12, 8, 6),
+        (13, 12, 4),
+        (15, 6, 7),
+    ],
 )
 def test_every_team_plays_its_matches_each_week_without_repeats(n, weeks, m):
     teams = list(range(1, n + 1))

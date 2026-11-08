@@ -4,10 +4,7 @@ BASICS = {"name": "Autumn", "num_teams": 4, "num_weeks": 2, "matches_per_week": 
 
 
 def default_teams(num_teams: int) -> list[dict]:
-    return [
-        {"players": [{"name": f"P{pos}a"}, {"name": f"P{pos}b"}]}
-        for pos in range(1, num_teams + 1)
-    ]
+    return [{"players": [{"name": f"P{pos}a"}, {"name": f"P{pos}b"}]} for pos in range(1, num_teams + 1)]
 
 
 def set_up_league(client, teams=None, **basics) -> dict:

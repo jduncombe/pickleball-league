@@ -23,6 +23,4 @@ def require_scoring_token(
     if credentials is None or not secrets.compare_digest(
         credentials.credentials.encode(), config.SCORING_API_TOKEN.encode()
     ):
-        raise HTTPException(
-            401, "Missing or invalid scoring token", headers={"WWW-Authenticate": "Bearer"}
-        )
+        raise HTTPException(401, "Missing or invalid scoring token", headers={"WWW-Authenticate": "Bearer"})

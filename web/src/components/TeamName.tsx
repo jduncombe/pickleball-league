@@ -18,7 +18,10 @@ export function TeamName({
 }) {
   const dupr = showDupr && team.dupr_ready;
   return (
-    <strong className={`${className} ${dupr ? "dupr" : ""}`.trim() || undefined} title={dupr ? DUPR_READY_TITLE : undefined}>
+    <strong
+      className={`${className} ${dupr ? "dupr" : ""}`.trim() || undefined}
+      title={dupr ? DUPR_READY_TITLE : undefined}
+    >
       {team.display_name}
     </strong>
   );

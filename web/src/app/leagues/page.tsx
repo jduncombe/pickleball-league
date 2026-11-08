@@ -50,11 +50,7 @@ export default function LeaguesPage() {
                 <td>{l.num_courts}</td>
                 <td>{l.current_week}</td>
                 <td>
-                  {l.status === "setup" ? (
-                    <Link href={setupHref(l.id, "basics")}>In setup</Link>
-                  ) : (
-                    "Active"
-                  )}
+                  {l.status === "setup" ? <Link href={setupHref(l.id, "basics")}>In setup</Link> : "Active"}
                 </td>
               </tr>
             ))}

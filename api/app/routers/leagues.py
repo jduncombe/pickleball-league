@@ -75,9 +75,7 @@ def dashboard(league_id: int, db: DB, week: int | None = Query(default=None, ge=
         .order_by(Match.court)
     ).all()
     week_matches = db.scalars(
-        select(Match)
-        .where(Match.league_id == league_id, Match.week == week)
-        .order_by(Match.round, Match.id)
+        select(Match).where(Match.league_id == league_id, Match.week == week).order_by(Match.round, Match.id)
     ).all()
 
     busy_teams = {t for m in in_progress for t in (m.team_a_id, m.team_b_id)}
@@ -107,8 +105,7 @@ def dashboard(league_id: int, db: DB, week: int | None = Query(default=None, ge=
 def standings(league_id: int, db: DB):
     league = get_or_404(db, League, league_id)
     rows = {
-        team.id: {"team": team, "played": 0, "wins": 0, "losses": 0,
-                  "points_for": 0, "points_against": 0}
+        team.id: {"team": team, "played": 0, "wins": 0, "losses": 0, "points_for": 0, "points_against": 0}
         for team in league.teams
     }
     for match in league.matches:

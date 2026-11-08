@@ -13,12 +13,17 @@ WEB_DEFAULTS = Path(__file__).resolve().parents[2] / "web" / "src" / "lib" / "de
 
 @pytest.mark.skipif(not WEB_DEFAULTS.exists(), reason="web app not alongside the API")
 def test_defaults_match_the_web_app():
-    assert DEFAULT_TERMS == json.loads(WEB_DEFAULTS.read_text())
+    assert json.loads(WEB_DEFAULTS.read_text()) == DEFAULT_TERMS
 
 
 def test_merge_rules():
-    merged = merge_terms({"league": {"one": "ladder"}, "team": {"one": "pair", "other": "pairs"},
-                          "match": {"one": "event", "article": "an"}})
+    merged = merge_terms(
+        {
+            "league": {"one": "ladder"},
+            "team": {"one": "pair", "other": "pairs"},
+            "match": {"one": "event", "article": "an"},
+        }
+    )
     assert merged["league"] == {"one": "ladder", "other": "ladders", "article": "a"}  # simple plural
     assert merged["team"]["other"] == "pairs"
     assert merged["match"]["article"] == "an"
