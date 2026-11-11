@@ -9,14 +9,59 @@ Full interactive documentation, generated from the code, is served at
 Errors use FastAPI's format: `{"detail": "message"}` for 404/409, and
 `{"detail": [{"loc": [...], "msg": "..."}]}` for 422 validation errors.
 
-## Leagues
+## Authentication
+
+Everything except `/health` and `/auth/login`, `/auth/mfa/*` needs a signed-in
+account: see [auth.md](auth.md) for roles, the sign-in flow and how
+credentials are protected. In short:
+
+- The web app's session is an HttpOnly cookie; requests that change data must
+  also send `X-Requested-With: fetch`.
+- Other clients (the scoring app, scripts) sign in with `"client": "app"` and
+  send `Authorization: Bearer <token>`. In [`/docs`](http://localhost:8000/docs),
+  use **Authorize** with such a token.
+- **401**: not signed in, or the session expired or was revoked.
+- **404**: doesn't exist, **or** your role or ownership doesn't let you see it
+  (users see only their own leagues; umpires only `/scoring/*`).
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `GET` | `/leagues` | List leagues, newest first |
+| `POST` | `/auth/login` | `{"email", "password", "client": "web" \| "app"}` → `{"mfa_token", "mfa_setup_required"}`. 401 for a wrong email or password (same message for both), 429 when locked out or rate-limited. |
+| `POST` | `/auth/mfa/setup` | `{"mfa_token"}` → `{"secret", "otpauth_uri", "qr_data_uri"}` (`qr_data_uri`: the QR code as an SVG `data:` URI), for accounts without an authenticator yet. 409 once one is set up. |
+| `POST` | `/auth/mfa/verify` | `{"mfa_token", "code", "client"}` → `{"user", "expires_at", "access_token"}`. Starts the session: a cookie for `web` (and `access_token` is null), a bearer token for `app`. |
+| `GET` | `/auth/me` | The signed-in account |
+| `POST` | `/auth/logout` | Revoke the current token (and clear the cookie). 204. |
+| `POST` | `/auth/password` | `{"current_password", "new_password", "code"}`. Signs you out everywhere. 204. |
+
+### Accounts (admins only)
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/users` | All accounts, by email |
+| `POST` | `/users` | `{"email", "name", "role": "admin" \| "user" \| "umpire", "password"}`. 409 if the email is taken. |
+| `PATCH` | `/users/{id}` | Any of `name`, `role`, `is_active`, `password`. Anything but the name signs them out everywhere. You can't change your own role or deactivate yourself (409). |
+| `POST` | `/users/{id}/reset-mfa` | Remove their authenticator; they set up a new one at their next sign-in. |
+
+Account object (passwords and TOTP secrets are never returned):
+
+```json
+{ "id": 3, "email": "sam@example.com", "name": "Sam", "role": "user",
+  "is_active": true, "mfa_enabled": true,
+  "created_at": "2026-11-08T09:00:00Z", "last_login_at": "2026-11-08T18:02:11Z" }
+```
+
+## Leagues
+
+League, setup, team and match endpoints are for admins and users (league
+organisers), not umpires. Users see and change only their own leagues; a
+league belongs to whoever creates it (`POST /leagues`).
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/leagues` | List leagues, newest first: all of them for admins; for users, their own and those shared with them |
 | `GET` | `/leagues/{id}` | Get a league |
 | `PATCH` | `/leagues/{id}` | Set `current_week` |
-| `DELETE` | `/leagues/{id}` | Delete a league and everything in it |
+| `DELETE` | `/leagues/{id}` | Delete a league and everything in it. Owner and admins only (409 for people it's shared with). |
 | `GET` | `/leagues/{id}/teams` | Teams with their players, in position order |
 | `GET` | `/leagues/{id}/matches?week=&status=` | Matches, optionally filtered |
 | `GET` | `/leagues/{id}/dashboard?week=` | Live view (defaults to `current_week`) |
@@ -40,6 +85,19 @@ Dashboard response:
   "total_count": 12
 }
 ```
+
+## League sharing
+
+The owner (or an admin) can share a league with other **user** accounts, who
+then manage it like the owner, except deleting it and changing who it's
+shared with. League objects include `"owner": {"id", "name", "email"}` (null
+for leagues from before accounts).
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/leagues/{id}/members` | `{"owner": {...}, "members": [{"user": {...}, "added_by": {...}, "added_at"}]}` |
+| `POST` | `/leagues/{id}/members` | `{"email": "sam@example.com"}`: share with that account. Owner and admins only (409 otherwise). 404 if there's no active account with that email; 422 for an admin or umpire account; 409 for the owner or someone it's already shared with. Returns the sharing as above. |
+| `DELETE` | `/leagues/{id}/members/{user_id}` | Stop sharing with someone. The owner and admins can remove anyone; others only themselves (leave). 204. |
 
 ## League setup
 
@@ -161,23 +219,11 @@ Match object:
 
 ## Scoring app
 
-Endpoints for a scoring app, such as a tablet at the courts. Unlike the rest
-of the API, they need a token:
-
-```
-Authorization: Bearer <token>
-```
-
-> **Temporary.** This is one shared token, standing in until real
-> authentication arrives (see [architecture.md](architecture.md#known-gaps--next-steps)).
-> The default, `NHyDvT2_fCQyNDDteDHPxHsurnlgedJFHZ0wEV5O1tA`, is in the
-> repository, so it isn't a secret: set `SCORING_API_TOKEN` to your own value
-> wherever the API is reachable by anyone else. Only these endpoints check
-> it; the rest of the API is still open.
-
-A missing or wrong token is a **401** with `WWW-Authenticate: Bearer`, never
-a 403 (CloudFront turns 403s into the site's 404 page). In
-[`/docs`](http://localhost:8000/docs), use **Authorize** to try them.
+Endpoints for a scoring app, such as a tablet at the courts. The app signs
+in as an **umpire** (or an organiser or admin) with `"client": "app"` and sends
+`Authorization: Bearer <token>` (see [auth.md](auth.md#signing-in)). Umpires
+can use only these endpoints, for any active league; organisers use them for
+their own leagues, admins for any.
 
 A scoring app at a court typically:
 
@@ -192,17 +238,17 @@ A scoring app at a court typically:
 | `GET` | `/scoring/leagues` | Leagues being played (`status: "active"`), newest first: `id`, `name`, `num_courts`, `current_week`, `points_to_win` |
 | `GET` | `/scoring/leagues/{id}/courts` | The league's courts that **no app has claimed**: `[{"court": 1, "in_use": false}, …]`. `in_use` means a match is on it now. 409 while the league is in setup. |
 | `POST` | `/scoring/leagues/{id}/courts/{court}/claim` | Claim a court. Optional body `{"device_name": "Court 3 tablet"}` (up to 80 characters), shown to anyone else who tries it. **201** with the claim; **409** if it's already claimed (the message names the device); 404 for a court outside `1…num_courts`; 409 while the league is in setup. |
-| `DELETE` | `/scoring/leagues/{id}/courts/{court}/claim` | Release a court, so it's offered again. 204, also if it wasn't claimed. |
+| `DELETE` | `/scoring/leagues/{id}/courts/{court}/claim` | Release a court, so it's offered again. 204, also if it wasn't claimed. Umpires can release only their own claims (409 otherwise); the organiser and admins any. |
 | `GET` | `/scoring/leagues/{id}/courts/{court}/match` | The match on the court now, with the scoring rules and the claim (see below). `match` is `null` when nothing is being played. 404 for an unknown court. |
 | `GET` | `/scoring/leagues/{id}/matches?week=&status=` | A week's matches (default: the league's `current_week`), in round order, with the scoring rules |
-| `PUT` | `/scoring/matches/{id}/result` | Record a score: `{"score_a": 11, "score_b": 7}`. Same rules and errors as `PUT /matches/{id}/result` (422 for an invalid score, 409 once verified or while the league is in setup). Returns the match object, and frees the court for its next match. |
+| `PUT` | `/scoring/matches/{id}/result` | Record a score: `{"score_a": 11, "score_b": 7}`. Same rules and errors as `PUT /matches/{id}/result` (422 for an invalid score, 409 once verified or while the league is in setup). Umpires can score only the in-progress match on a court they've claimed (409 otherwise). Returns the match object, and frees the court for its next match. |
 
-Court claims only stop two scoring apps using the same court; they don't
-affect which matches can start where. Anyone with the token can release any
-claim, which is also how an organiser frees a court held by a lost or
-crashed device. Claims are kept when the league goes back into setup; a
-claim on a court the league no longer has (after reducing `num_courts`) is
-ignored.
+Court claims stop two scoring apps using the same court, and decide which
+umpire can score a court's match; they don't affect which matches can start
+where. The organiser (or an admin) frees a court held by a lost or crashed
+device by releasing its claim. Claims are kept when the league goes back into
+setup; a claim on a court the league no longer has (after reducing
+`num_courts`) is ignored.
 
 A court and its match:
 
@@ -210,6 +256,7 @@ A court and its match:
 {
   "league_id": 1, "league_name": "Autumn", "court": 2, "points_to_win": 11,
   "claim": { "league_id": 1, "court": 2, "device_name": "Court 2 tablet",
+             "claimed_by": { "id": 7, "name": "Jo (umpire)" },
              "claimed_at": "2026-11-10T18:01:00Z" },
   "match": { /* match object, as above, or null */ }
 }
@@ -225,7 +272,7 @@ A week's matches:
 ```
 
 ```bash
-TOKEN=NHyDvT2_fCQyNDDteDHPxHsurnlgedJFHZ0wEV5O1tA
+# TOKEN: from POST /auth/mfa/verify with "client": "app" (see auth.md)
 curl -H "Authorization: Bearer $TOKEN" localhost:8000/scoring/leagues
 curl -H "Authorization: Bearer $TOKEN" localhost:8000/scoring/leagues/1/courts
 curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \

@@ -1,34 +1,34 @@
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 
 from .. import schemas
-from ..deps import DB, get_or_404
+from ..auth import Manager, managed, require_manager
+from ..deps import DB
 from ..models import LeagueStatus, Match, MatchStatus
 from ..scoring import check_score
 from ..terms import Term, term
 
-router = APIRouter(prefix="/matches", tags=["matches"])
+router = APIRouter(prefix="/matches", tags=["matches"], dependencies=[Depends(require_manager)])
 
 
-def _get_playable(db, match_id: int) -> Match:
-    """Fetch a match whose league is active (no play while a league is in setup)."""
-    match = get_or_404(db, Match, match_id)
+def require_playable(match: Match) -> Match:
+    """The match, if its league is active (no play while a league is in setup)."""
     if match.league.status != LeagueStatus.ACTIVE:
         raise HTTPException(409, f"{Term('league')} is in setup; create the {term('league')} to resume play")
     return match
 
 
 @router.get("/{match_id}", response_model=schemas.MatchRead)
-def get_match(match_id: int, db: DB):
-    return get_or_404(db, Match, match_id)
+def get_match(match_id: int, user: Manager, db: DB):
+    return managed(db, user, Match, match_id)
 
 
 @router.post("/{match_id}/start", response_model=schemas.MatchRead)
-def start_match(match_id: int, payload: schemas.MatchStart, db: DB):
+def start_match(match_id: int, payload: schemas.MatchStart, user: Manager, db: DB):
     """Put a scheduled match on court. Both teams and the court must be free."""
-    match = _get_playable(db, match_id)
+    match = require_playable(managed(db, user, Match, match_id))
     if match.status != MatchStatus.SCHEDULED:
         raise HTTPException(409, f"{Term('match')} is already {match.status.value.replace('_', ' ')}")
 
@@ -58,9 +58,9 @@ def start_match(match_id: int, payload: schemas.MatchStart, db: DB):
 
 
 @router.post("/{match_id}/cancel", response_model=schemas.MatchRead)
-def cancel_match(match_id: int, db: DB):
+def cancel_match(match_id: int, user: Manager, db: DB):
     """Take an in-progress match off court and return it to the schedule."""
-    match = _get_playable(db, match_id)
+    match = require_playable(managed(db, user, Match, match_id))
     if match.status != MatchStatus.IN_PROGRESS:
         raise HTTPException(409, f"Only in-progress {term('match', 2)} can be returned to the schedule")
     match.status = MatchStatus.SCHEDULED
@@ -71,14 +71,18 @@ def cancel_match(match_id: int, db: DB):
 
 
 @router.put("/{match_id}/result", response_model=schemas.MatchRead)
-def record_result(match_id: int, payload: schemas.MatchResult, db: DB):
+def record_result(match_id: int, payload: schemas.MatchResult, user: Manager, db: DB):
     """Record (or correct) a final score. Frees the court if the match was on one.
 
     Scores must follow the league's rules (first to points_to_win, win by 2);
     an invalid score is a 422 naming the score field(s) at fault. Verified
     results are locked (409).
     """
-    match = _get_playable(db, match_id)
+    return apply_result(require_playable(managed(db, user, Match, match_id)), payload, db)
+
+
+def apply_result(match: Match, payload: schemas.MatchResult, db) -> Match:
+    """Record a score on a playable match (shared with routers/scoring.py)."""
     if match.verified_at is not None:
         raise HTTPException(409, "This result has been verified and can't be changed")
 
@@ -103,9 +107,9 @@ def record_result(match_id: int, payload: schemas.MatchResult, db: DB):
 
 
 @router.post("/{match_id}/verify", response_model=schemas.MatchRead)
-def verify_result(match_id: int, db: DB):
+def verify_result(match_id: int, user: Manager, db: DB):
     """Verify a completed match's result. The score is then locked for good."""
-    match = _get_playable(db, match_id)
+    match = require_playable(managed(db, user, Match, match_id))
     if match.status != MatchStatus.COMPLETED:
         raise HTTPException(409, f"Only completed {term('match', 2)} can be verified")
     if match.verified_at is None:

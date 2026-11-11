@@ -4,16 +4,27 @@
 // CloudFront in AWS, nginx in docker-compose, and a dev-server rewrite under
 // `npm run dev` (see next.config.ts). NEXT_PUBLIC_API_URL overrides this at
 // build time, e.g. to call the API directly (needs CORS_ORIGINS on the API).
+//
+// Auth: the session is an HttpOnly cookie set by the API at sign-in, so script
+// never sees the token. Every request sends X-Requested-With, which the API
+// requires (with the cookie) for anything that changes data: CSRF protection.
 
 import type {
   Dashboard,
   League,
   LeagueBasics,
+  LeagueSharing,
+  LoginStep,
   Match,
+  MfaSetup,
   SchedulePreview,
+  Session,
   StandingRow,
   Team,
   TeamSetup,
+  User,
+  UserCreate,
+  UserUpdate,
 } from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "/api";
@@ -31,12 +42,19 @@ export class ApiError extends Error {
 
 type ValidationError = { loc?: (string | number)[]; msg: string };
 
+/** Fired when the API says the session is missing or expired (see lib/auth.tsx). */
+export const SIGNED_OUT_EVENT = "auth:signed-out";
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     ...init,
-    headers: { "Content-Type": "application/json", ...init?.headers },
+    headers: { "Content-Type": "application/json", "X-Requested-With": "fetch", ...init?.headers },
+    credentials: "same-origin",
     cache: "no-store",
   });
+  if (res.status === 401 && !path.startsWith("/auth/")) {
+    window.dispatchEvent(new Event(SIGNED_OUT_EVENT));
+  }
   if (!res.ok) {
     let message = res.statusText;
     let fields: string[] = [];
@@ -60,6 +78,26 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 const json = (body: unknown) => JSON.stringify(body);
 
 export const api = {
+  // Sign-in: password, then a TOTP code (enrolling an authenticator first if needed)
+  login: (email: string, password: string) =>
+    request<LoginStep>("/auth/login", { method: "POST", body: json({ email, password, client: "web" }) }),
+  mfaSetup: (mfa_token: string) =>
+    request<MfaSetup>("/auth/mfa/setup", { method: "POST", body: json({ mfa_token }) }),
+  mfaVerify: (mfa_token: string, code: string) =>
+    request<Session>("/auth/mfa/verify", { method: "POST", body: json({ mfa_token, code, client: "web" }) }),
+  me: () => request<User>("/auth/me"),
+  logout: () => request<void>("/auth/logout", { method: "POST" }),
+  /** Change your password; signs you out everywhere, this browser included. */
+  changePassword: (current_password: string, new_password: string, code: string) =>
+    request<void>("/auth/password", { method: "POST", body: json({ current_password, new_password, code }) }),
+
+  // Accounts (admins only)
+  listUsers: () => request<User[]>("/users"),
+  createUser: (body: UserCreate) => request<User>("/users", { method: "POST", body: json(body) }),
+  updateUser: (id: number, body: UserUpdate) =>
+    request<User>(`/users/${id}`, { method: "PATCH", body: json(body) }),
+  resetMfa: (id: number) => request<User>(`/users/${id}/reset-mfa`, { method: "POST" }),
+
   // Leagues
   listLeagues: () => request<League[]>("/leagues"),
   getLeague: (id: number) => request<League>(`/leagues/${id}`),
@@ -69,6 +107,13 @@ export const api = {
     request<Dashboard>(`/leagues/${id}/dashboard${week ? `?week=${week}` : ""}`),
   standings: (id: number) => request<StandingRow[]>(`/leagues/${id}/standings`),
   listTeams: (leagueId: number) => request<Team[]>(`/leagues/${leagueId}/teams`),
+
+  // Sharing (only the owner and admins can change it; members can leave)
+  sharing: (id: number) => request<LeagueSharing>(`/leagues/${id}/members`),
+  share: (id: number, email: string) =>
+    request<LeagueSharing>(`/leagues/${id}/members`, { method: "POST", body: json({ email }) }),
+  unshare: (id: number, userId: number) =>
+    request<void>(`/leagues/${id}/members/${userId}`, { method: "DELETE" }),
 
   // Setup (teams and players can only be changed while a league is in setup)
   schedulePreview: (b: Pick<LeagueBasics, "num_teams" | "num_weeks" | "matches_per_week">) =>

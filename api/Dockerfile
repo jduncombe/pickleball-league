@@ -2,7 +2,8 @@ FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    DATABASE_URL=sqlite:////data/pickleball.db
+    DATABASE_URL=sqlite:////data/pickleball.db \
+    AUTH_SECRET_FILE=/data/auth_secret
 
 WORKDIR /app
 

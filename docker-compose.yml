@@ -7,8 +7,14 @@ services:
       APP_NAME: ${APP_NAME:-Pickleball League}
       # The brand's terminology table, so API messages use the same words as the UI.
       TERMS_FILE: /brands/${BRAND:-default}/terms.json
-      # Token for the /scoring endpoints; empty means the built-in temporary one.
-      SCORING_API_TOKEN: ${SCORING_API_TOKEN:-}
+      # Auth master key (docs/auth.md). Unset, one is generated into the data volume.
+      AUTH_SECRET_KEY: ${AUTH_SECRET_KEY:-}
+      AUTH_SECRET_FILE: /data/auth_secret
+      # The session cookie is Secure: fine on http://localhost, but set
+      # COOKIE_SECURE=false to sign in over plain http from another host.
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      # Browsers come through the web container's nginx (one proxy hop).
+      TRUSTED_PROXY_HOPS: "1"
     volumes:
       - api-data:/data
       - ./web/brands:/brands:ro

@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import APP_NAME, CORS_ORIGINS, ROOT_PATH
 from .database import init_db
-from .routers import leagues, matches, scoring, setup, teams
+from .routers import auth, leagues, matches, scoring, setup, sharing, teams, users
 
 
 @asynccontextmanager
@@ -31,9 +31,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router)
+app.include_router(users.router)
 app.include_router(setup.router)
 app.include_router(setup.preview_router)
 app.include_router(leagues.router)
+app.include_router(sharing.router)
 app.include_router(teams.router)
 app.include_router(matches.router)
 app.include_router(scoring.router)

@@ -47,6 +47,9 @@ See [deployment.md](deployment.md) for the AWS details.
 - `scheduling.py` — pure functions that build the round-robin schedule; no DB
   access, easy to unit test.
 - `routers/` — endpoints grouped by resource.
+- `auth.py` — the signed-in user and role/ownership checks; `security.py` —
+  password hashing, PASETO tokens and TOTP ([auth.md](auth.md)).
+- `cli.py` — `python -m app.cli create-user` for the first admin.
 - Tables are created on startup (`init_db`). Interactive docs at `/docs`,
   OpenAPI JSON at `/openapi.json`. Behind a proxy, `ROOT_PATH=/api` makes the
   docs page load the spec from `/api/openapi.json`.
@@ -68,7 +71,7 @@ hides the difference; the API test suite runs against both in CI.
 | `NEXT_PUBLIC_API_URL` | web (build time) | `/api` | Base URL the browser uses for API calls |
 | `BRAND` | web (build time) | `default` | White-label brand folder in `web/brands/` ([white-labelling.md](white-labelling.md)) |
 | `APP_NAME` | api | `Pickleball League` | Product name in the API docs title |
-| `SCORING_API_TOKEN` | api | a temporary token committed in `config.py` | Bearer token for the scoring-app endpoints ([api.md](api.md#scoring-app)). Set your own anywhere the API is reachable by others. |
+| `AUTH_SECRET_KEY` | api | generated into `AUTH_SECRET_FILE` | Master secret for sign-in tokens and TOTP encryption ([auth.md](auth.md#configuration), which also lists the other auth settings: `ACCESS_TOKEN_TTL_SECONDS`, `COOKIE_SECURE`, `TRUSTED_PROXY_HOPS`, `LOGIN_ATTEMPTS_PER_MINUTE`) |
 | `TERMS_FILE` / `TERMS_JSON` | api | default terms | The brand's terminology table (a path to its `terms.json`, or the JSON itself) for API messages ([white-labelling.md](white-labelling.md)) |
 | `TEST_DATABASE_URL` | api tests | in-memory SQLite | Run the tests against another database (CI uses Postgres) |
 
@@ -91,10 +94,10 @@ hides the difference; the API test suite runs against both in CI.
 
 This is a skeleton. Likely next steps, roughly in priority order:
 
-1. **Authentication & roles** — organiser vs. read-only viewer, e.g. Amazon
-   Cognito with tokens verified by the API. Until then, only the scoring-app
-   endpoints (`/scoring/*`) are protected, by one shared, temporary token
-   (`SCORING_API_TOKEN`, see [api.md](api.md#scoring-app)).
+1. **Sharing & recovery** — accounts, roles and MFA are in place
+   ([auth.md](auth.md)); next are sharing a league between users, per-league
+   umpires, a read-only viewer role, and self-service password reset with
+   recovery codes.
 2. **Migrations** — replace `create_all` with Alembic before the schema changes
    (and before running more than one API task, which would race on first start).
 3. **Scheduling options** — balance courts across teams, respect team

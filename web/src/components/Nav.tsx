@@ -1,6 +1,9 @@
+"use client";
+
 import type { StaticImageData } from "next/image";
 import Link from "next/link";
 import { brand } from "@brand/brand";
+import { useAuth } from "@/lib/auth";
 import { Term, term } from "@/lib/terms";
 
 function Logo({
@@ -27,6 +30,7 @@ function Logo({
 }
 
 export function Nav() {
+  const { user, signOut } = useAuth();
   return (
     <header className="nav">
       <Link href="/" className="brand" aria-label={`${brand.name} home`}>
@@ -39,13 +43,22 @@ export function Nav() {
           </>
         )}
       </Link>
-      <nav>
-        <Link href="/">Dashboard</Link>
-        <Link href="/leagues">{Term("league", 2)}</Link>
-        <Link href="/leagues/new" className="button small">
-          New {term("league")}
-        </Link>
-      </nav>
+      {user && (
+        <nav>
+          <Link href="/">Dashboard</Link>
+          <Link href="/leagues">{Term("league", 2)}</Link>
+          {user.role === "admin" && <Link href="/users">Users</Link>}
+          <Link href="/leagues/new" className="button small">
+            New {term("league")}
+          </Link>
+          <span className="nav-user" title={user.email}>
+            <Link href="/account">{user.name}</Link>
+            <button type="button" className="link" onClick={signOut}>
+              Sign out
+            </button>
+          </span>
+        </nav>
+      )}
     </header>
   );
 }

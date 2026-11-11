@@ -1,11 +1,12 @@
 """Pydantic request/response schemas."""
 
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from .models import LeagueStatus, MatchStatus
+from .models import LeagueStatus, MatchStatus, UserRole
+from .security import MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH
 from .terms import count, term
 
 
@@ -45,6 +46,12 @@ class LeagueUpdate(BaseModel):
     current_week: int | None = Field(default=None, ge=1)
 
 
+class UserRef(ORMModel):
+    id: int
+    name: str
+    email: str
+
+
 class LeagueRead(ORMModel):
     id: int
     name: str
@@ -60,6 +67,25 @@ class LeagueRead(ORMModel):
     has_played_matches: bool
     current_week: int
     created_at: datetime
+    # Null for leagues from before accounts (admins only).
+    owner: UserRef | None
+
+
+class LeagueMemberRead(ORMModel):
+    user: UserRef
+    added_by: UserRef | None
+    added_at: datetime
+
+
+class LeagueSharing(BaseModel):
+    owner: UserRef | None
+    members: list[LeagueMemberRead]
+
+
+class LeagueShare(BaseModel):
+    email: str = Field(max_length=254)
+
+    _email = field_validator("email", mode="before")(lambda v: v.strip().lower() if isinstance(v, str) else v)
 
 
 # --- Players -----------------------------------------------------------------
@@ -202,10 +228,16 @@ class CourtClaimCreate(BaseModel):
         return _clean_optional(value)
 
 
+class ClaimHolder(ORMModel):
+    id: int
+    name: str
+
+
 class CourtClaimRead(ORMModel):
     league_id: int
     court: int
     device_name: str | None
+    claimed_by: ClaimHolder | None
     claimed_at: datetime
 
 
@@ -260,3 +292,88 @@ class SchedulePreview(BaseModel):
     # Across the season, the fewest and most times any two teams meet.
     min_meetings: int
     max_meetings: int
+
+
+# --- Accounts and sign-in ------------------------------------------------------
+
+Password = Annotated[str, Field(min_length=MIN_PASSWORD_LENGTH, max_length=MAX_PASSWORD_LENGTH)]
+TotpCode = Annotated[str, Field(min_length=6, max_length=8)]
+# "web": the session goes in an HttpOnly cookie and never reaches script.
+# "app" (the scoring app): the access token is returned in the body.
+Client = Literal["web", "app"]
+
+
+def _normalise_email(value):
+    return value.strip().lower() if isinstance(value, str) else value
+
+
+class UserRead(ORMModel):
+    id: int
+    email: str
+    name: str
+    role: UserRole
+    is_active: bool
+    mfa_enabled: bool
+    created_at: datetime
+    last_login_at: datetime | None
+
+
+class UserCreate(BaseModel):
+    email: str = Field(min_length=3, max_length=254, pattern=r"^[^@\s]+@[^@\s]+$")
+    name: str = Field(min_length=1, max_length=120)
+    role: UserRole
+    password: Password
+
+    _email = field_validator("email", mode="before")(_normalise_email)
+
+
+class UserUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=120)
+    role: UserRole | None = None
+    is_active: bool | None = None
+    password: Password | None = None
+
+
+class LoginRequest(BaseModel):
+    email: str = Field(max_length=254)
+    password: str = Field(max_length=MAX_PASSWORD_LENGTH)
+    client: Client = "web"
+
+    _email = field_validator("email", mode="before")(_normalise_email)
+
+
+class LoginStep(BaseModel):
+    """Password accepted; send a TOTP code with this token (after enrolling, if needed)."""
+
+    mfa_token: str
+    mfa_setup_required: bool
+
+
+class MfaSetupRequest(BaseModel):
+    mfa_token: str
+
+
+class MfaSetup(BaseModel):
+    secret: str
+    otpauth_uri: str
+    # The otpauth URI as a QR code: an SVG data: URI, for an <img>.
+    qr_data_uri: str
+
+
+class MfaVerifyRequest(BaseModel):
+    mfa_token: str
+    code: TotpCode
+    client: Client = "web"
+
+
+class Session(BaseModel):
+    user: UserRead
+    expires_at: datetime
+    # Only for client "app"; the web app gets an HttpOnly cookie instead.
+    access_token: str | None = None
+
+
+class PasswordChange(BaseModel):
+    current_password: str = Field(max_length=MAX_PASSWORD_LENGTH)
+    new_password: Password
+    code: TotpCode

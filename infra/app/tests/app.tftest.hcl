@@ -47,6 +47,9 @@ mock_provider "aws" {
   mock_resource "aws_ecs_task_definition" {
     defaults = { arn = "arn:aws:ecs:ap-southeast-2:123456789012:task-definition/example:1" }
   }
+  mock_resource "aws_secretsmanager_secret" {
+    defaults = { arn = "arn:aws:secretsmanager:ap-southeast-2:123456789012:secret:auth-abc" }
+  }
   mock_resource "aws_s3_bucket" {
     defaults = { arn = "arn:aws:s3:::example" }
   }
@@ -125,8 +128,9 @@ run "default_configuration" {
       ] == [
       "arn:aws:secretsmanager:ap-southeast-2:123456789012:secret:rds-db-abc:username::",
       "arn:aws:secretsmanager:ap-southeast-2:123456789012:secret:rds-db-abc:password::",
+      "arn:aws:secretsmanager:ap-southeast-2:123456789012:secret:auth-abc",
     ]
-    error_message = "DB credentials must come from the RDS-managed secret."
+    error_message = "DB credentials must come from the RDS-managed secret, and the auth key from its own."
   }
 
   assert {

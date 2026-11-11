@@ -1,27 +1,32 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 
 from .. import schemas
-from ..deps import DB, get_or_404
-from ..models import League, Match, MatchStatus
+from ..auth import Manager, can_own, managed_league, require_manager, visible_to
+from ..deps import DB
+from ..models import League, Match, MatchStatus, UserRole
 from ..terms import term
 
-router = APIRouter(prefix="/leagues", tags=["leagues"])
+router = APIRouter(prefix="/leagues", tags=["leagues"], dependencies=[Depends(require_manager)])
 
 
 @router.get("", response_model=list[schemas.LeagueRead])
-def list_leagues(db: DB):
-    return db.scalars(select(League).order_by(League.created_at.desc())).all()
+def list_leagues(user: Manager, db: DB):
+    """Every league for admins; your own and those shared with you for users."""
+    query = select(League).order_by(League.created_at.desc())
+    if user.role != UserRole.ADMIN:
+        query = query.where(visible_to(user))
+    return db.scalars(query).all()
 
 
 @router.get("/{league_id}", response_model=schemas.LeagueRead)
-def get_league(league_id: int, db: DB):
-    return get_or_404(db, League, league_id)
+def get_league(league_id: int, user: Manager, db: DB):
+    return managed_league(db, user, league_id)
 
 
 @router.patch("/{league_id}", response_model=schemas.LeagueRead)
-def update_league(league_id: int, payload: schemas.LeagueUpdate, db: DB):
-    league = get_or_404(db, League, league_id)
+def update_league(league_id: int, payload: schemas.LeagueUpdate, user: Manager, db: DB):
+    league = managed_league(db, user, league_id)
     changes = payload.model_dump(exclude_unset=True)
     if "current_week" in changes and changes["current_week"] > league.num_weeks:
         raise HTTPException(422, f"Current {term('week')} must be between 1 and {league.num_weeks}")
@@ -32,24 +37,29 @@ def update_league(league_id: int, payload: schemas.LeagueUpdate, db: DB):
 
 
 @router.delete("/{league_id}", status_code=204)
-def delete_league(league_id: int, db: DB):
-    db.delete(get_or_404(db, League, league_id))
+def delete_league(league_id: int, user: Manager, db: DB):
+    """Only the owner (or an admin) can delete a league; 409 for people it's shared with."""
+    league = managed_league(db, user, league_id)
+    if not can_own(user, league):
+        raise HTTPException(409, f"Only the {term('league')}'s owner can delete it")
+    db.delete(league)
     db.commit()
 
 
 @router.get("/{league_id}/teams", response_model=list[schemas.TeamRead])
-def list_teams(league_id: int, db: DB):
-    return get_or_404(db, League, league_id).teams
+def list_teams(league_id: int, user: Manager, db: DB):
+    return managed_league(db, user, league_id).teams
 
 
 @router.get("/{league_id}/matches", response_model=list[schemas.MatchRead])
 def list_matches(
     league_id: int,
+    user: Manager,
     db: DB,
     week: int | None = Query(default=None, ge=1),
     status: MatchStatus | None = None,
 ):
-    get_or_404(db, League, league_id)
+    managed_league(db, user, league_id)
     query = select(Match).where(Match.league_id == league_id)
     if week is not None:
         query = query.where(Match.week == week)
@@ -59,14 +69,14 @@ def list_matches(
 
 
 @router.get("/{league_id}/dashboard", response_model=schemas.Dashboard)
-def dashboard(league_id: int, db: DB, week: int | None = Query(default=None, ge=1)):
+def dashboard(league_id: int, user: Manager, db: DB, week: int | None = Query(default=None, ge=1)):
     """What's on court now, and which of this week's matches could start next.
 
     * ``in_progress`` – matches currently being played (any week).
     * ``available``   – this week's unplayed matches where neither team is on court.
     * ``waiting``     – this week's unplayed matches blocked by a team that is on court.
     """
-    league = get_or_404(db, League, league_id)
+    league = managed_league(db, user, league_id)
     week = week or league.current_week
 
     in_progress = db.scalars(
@@ -102,8 +112,8 @@ def dashboard(league_id: int, db: DB, week: int | None = Query(default=None, ge=
 
 
 @router.get("/{league_id}/standings", response_model=list[schemas.StandingRow])
-def standings(league_id: int, db: DB):
-    league = get_or_404(db, League, league_id)
+def standings(league_id: int, user: Manager, db: DB):
+    league = managed_league(db, user, league_id)
     rows = {
         team.id: {"team": team, "played": 0, "wins": 0, "losses": 0, "points_for": 0, "points_against": 0}
         for team in league.teams
